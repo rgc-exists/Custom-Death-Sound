@@ -105,8 +105,8 @@ $execute{
 		reloadSounds();
 	});
 	listenForSettingChanges("clear-on-reset", [](bool value) {
-		extraSoundsEnabled = value;
-		});
+		clearOnReset = value;
+	});
 
 }
 
