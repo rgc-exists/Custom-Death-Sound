@@ -34,6 +34,11 @@
 				"input": true
 			}
 		},
+		"clear-on-reset": {
+			"type": "bool",
+			"name": "Stop Sound On Reset",
+			"default": true
+		},
 		"extra-sounds-title": {
 			"type": "title",
 			"name": "Extra Sounds (Random Pick)",

@@ -14,8 +14,11 @@ using namespace geode::prelude;
 static FMOD::Sound* death_sound;
 static std::string death_sound_path;
 
+static FMOD::Channel* playing_channel; //Only gets set when clear-on-reset setting is false!
+
 static std::map<std::string, FMOD::Sound*> extraDeathSounds;
 static bool extra_sounds_enabled = false;
+static bool clear_on_reset = true;
 
 std::filesystem::path getDeathSoundPath() {
 	return Mod::get()->getSettingValue<std::filesystem::path>("sound-path");
@@ -77,6 +80,7 @@ void reloadSounds() {
 
 $execute{
 	extra_sounds_enabled = Mod::get()->getSettingValue<bool>("extra-sounds-enabled");
+	clear_on_reset = Mod::get()->getSettingValue<bool>("clear-on-reset");
 
 	std::filesystem::path defaultPath = Mod::get()->getConfigDir() / "extraDeathSounds";
 	if (!std::filesystem::exists(Mod::get()->getConfigDir())) {
@@ -100,22 +104,31 @@ $execute{
 		extra_sounds_enabled = value;
 		reloadSounds();
 	});
+	listenForSettingChanges("clear-on-reset", [](bool value) {
+		clear_on_reset = value;
+		});
 
 }
 
 
+
 class $modify(FMODAudioEngine) {
 	void playEffect(gd::string path, float speed, float p2, float volume) {
+
+		FMOD::Sound* sound;
 		if (path == "explode_11.ogg") {
+
 
 			if (extra_sounds_enabled && extraDeathSounds.size() > 0) {
 
 				auto it = extraDeathSounds.begin();
 				std::advance(it, rand() % extraDeathSounds.size());
 				path = it->first;
+				sound = extraDeathSounds[path];
 			}
 			else if (death_sound != nullptr) {
 				path = death_sound_path;
+				sound = death_sound;
 			} else {
 				FMODAudioEngine::playEffect(path, speed, p2, volume);
 				return;
@@ -127,8 +140,26 @@ class $modify(FMODAudioEngine) {
 			speed = min_pitch + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max_pitch - min_pitch)));
 
 			volume = Mod::get()->getSettingValue<double>("volume");
+
+			if (!clear_on_reset) {
+
+				FMOD_RESULT result = m_system->playSound(
+					sound,
+					nullptr,
+					false,
+					&playing_channel
+				);
+				if (result == FMOD_OK) {
+					playing_channel->setVolume(volume);
+					playing_channel->setPitch(speed);
+				}
+				else {
+					log::error("m_system->playSound returned error!");
+				}
+				return;
+			}
 		}
-		
+
 		FMODAudioEngine::playEffect(path, speed, p2, volume);
 	}
 };
