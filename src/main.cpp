@@ -11,14 +11,14 @@
 using namespace geode::prelude;
 
 
-static FMOD::Sound* death_sound;
-static std::string death_sound_path;
+static FMOD::Sound* deathSound;
+static std::string deathSoundPath;
 
-static FMOD::Channel* playing_channel; //Only gets set when clear-on-reset setting is false!
+static FMOD::Channel* playingChannel; //Only gets set when clear-on-reset setting is false!
 
 static std::map<std::string, FMOD::Sound*> extraDeathSounds;
-static bool extra_sounds_enabled = false;
-static bool clear_on_reset = true;
+static bool extraSoundsEnabled = false;
+static bool clearOnReset = true;
 
 std::filesystem::path getDeathSoundPath() {
 	return Mod::get()->getSettingValue<std::filesystem::path>("sound-path");
@@ -35,9 +35,9 @@ void reloadExtraSounds() {
 		{
 			if (std::find(exts.begin(), exts.end(), p.path().extension()) != exts.end()) {
 				FMOD::Sound* sound;
-				std::string path_str = p.path().string();
-				if (FMODAudioEngine::sharedEngine()->m_system->createSound(path_str.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-					extraDeathSounds[path_str] = sound;
+				std::string pathStr = p.path().string();
+				if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+					extraDeathSounds[pathStr] = sound;
 				}
 			}
 		}
@@ -54,22 +54,22 @@ void reloadSounds() {
 	}
 	extraDeathSounds.clear();
 	
-	if (death_sound != nullptr) {
-		death_sound->release();
+	if (deathSound != nullptr) {
+		deathSound->release();
 	}
 
 	log::info("Reloading death sound(s)");
-	if (extra_sounds_enabled) {
+	if (extraSoundsEnabled) {
 		reloadExtraSounds();
 	}
 	else {
 		std::filesystem::path path = getDeathSoundPath();
 		if (std::filesystem::exists(path)) {
 			FMOD::Sound* sound;
-			std::string path_str = path.string();
-			if (FMODAudioEngine::sharedEngine()->m_system->createSound(path_str.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-				death_sound = sound;
-				death_sound_path = path.string();
+			std::string pathStr = path.string();
+			if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+				deathSound = sound;
+				deathSoundPath = path.string();
 			}
 		}
 		else {
@@ -79,8 +79,8 @@ void reloadSounds() {
 }
 
 $execute{
-	extra_sounds_enabled = Mod::get()->getSettingValue<bool>("extra-sounds-enabled");
-	clear_on_reset = Mod::get()->getSettingValue<bool>("clear-on-reset");
+	extraSoundsEnabled = Mod::get()->getSettingValue<bool>("extra-sounds-enabled");
+	clearOnReset = Mod::get()->getSettingValue<bool>("clear-on-reset");
 
 	std::filesystem::path defaultPath = Mod::get()->getConfigDir() / "extraDeathSounds";
 	if (!std::filesystem::exists(Mod::get()->getConfigDir())) {
@@ -101,11 +101,11 @@ $execute{
 		reloadSounds();
 	});
 	listenForSettingChanges("extra-sounds-enabled", [](bool value) {
-		extra_sounds_enabled = value;
+		extraSoundsEnabled = value;
 		reloadSounds();
 	});
 	listenForSettingChanges("clear-on-reset", [](bool value) {
-		clear_on_reset = value;
+		extraSoundsEnabled = value;
 		});
 
 }
@@ -119,39 +119,39 @@ class $modify(FMODAudioEngine) {
 		if (path == "explode_11.ogg") {
 
 
-			if (extra_sounds_enabled && extraDeathSounds.size() > 0) {
+			if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
 
 				auto it = extraDeathSounds.begin();
 				std::advance(it, rand() % extraDeathSounds.size());
 				path = it->first;
 				sound = extraDeathSounds[path];
 			}
-			else if (death_sound != nullptr) {
-				path = death_sound_path;
-				sound = death_sound;
+			else if (deathSound != nullptr) {
+				path = deathSoundPath;
+				sound = deathSound;
 			} else {
 				FMODAudioEngine::playEffect(path, speed, p2, volume);
 				return;
 			}
 
-			float min_pitch = Mod::get()->getSettingValue<double>("pitch-minimum");
-			float max_pitch = Mod::get()->getSettingValue<double>("pitch-maximum");
-			if (min_pitch >= max_pitch) min_pitch = max_pitch;
-			speed = min_pitch + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max_pitch - min_pitch)));
+			float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
+			float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
+			if (minPitch >= maxPitch) minPitch = maxPitch;
+			speed = minPitch + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (maxPitch - minPitch)));
 
 			volume = Mod::get()->getSettingValue<double>("volume");
 
-			if (!clear_on_reset) {
+			if (!clearOnReset) {
 
 				FMOD_RESULT result = m_system->playSound(
 					sound,
 					nullptr,
 					false,
-					&playing_channel
+					&playingChannel
 				);
 				if (result == FMOD_OK) {
-					playing_channel->setVolume(volume);
-					playing_channel->setPitch(speed);
+					playingChannel->setVolume(volume);
+					playingChannel->setPitch(speed);
 				}
 				else {
 					log::error("m_system->playSound returned error!");
