@@ -1,0 +1,79 @@
+{
+	"geode": "4.0.1",
+	"gd": {
+		"win": "2.2074"
+	},
+	"id": "rgc_exists.death_sfx_changer",
+	"name": "Custom Death Sound",
+	"version": "v1.0.0",
+	"developer": "RGC Exists",
+	"description": "A mod for changing the death sound effect, but with extra randomization features. Pick from a folder of random sounds and randomize the pitch.",
+	"resources": {
+	},
+	"settings": {
+		"sound-path": {
+			"type": "file",
+			"name": "Death Sound File",
+			"default": "{gd_dir}/resources/explode_11.ogg",
+			"filters": [
+				{
+					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
+					"description": "Audo files"
+				}
+			]
+		},
+		"volume": {
+			"name": "Volume",
+			"type": "float",
+			"default": 1,
+			"min": 0.0,
+			"max": 3.0,
+			"control": {
+				"slider": true,
+				"input": true
+			}
+		},
+		"extra-sounds-title": {
+			"type": "title",
+			"name": "Extra Sounds (Random Pick)",
+			"description": "Import a folder with MULTIPLE sounds and have them chosen from randomly. THIS WILL OVERRIDE YOUR MAIN SOUND!"
+		},
+		"extra-sounds-enabled": {
+			"type": "bool",
+			"name": "Extra Sounds Enabled (OVERRIDES MAIN SOUND)",
+			"default": false
+		},
+		"extra-sounds-path": {
+			"type": "folder",
+			"name": "Extra Death Sounds Directory",
+			"default": "{mod_config_dir}/extraDeathSounds"
+		},
+		"pitch-randomization-title": {
+			"type": "title",
+			"name": "Pitch Randomization",
+			"description": "Control the minimum and maximum pitch multiplier for the death sound(s). Setting both to the same value will make it constant."
+		},
+		"pitch-minimum": {
+			"name": "Pitch Minimum",
+			"type": "float",
+			"default": 1,
+			"min": 0.25,
+			"max": 2.5,
+			"control": {
+				"slider": true,
+				"input": true
+			}
+		},
+		"pitch-maximum": {
+			"name": "Pitch Maximum",
+			"type": "float",
+			"default": 1,
+			"min": 0.25,
+			"max": 2.5,
+			"control": {
+				"slider": true,
+				"input": true
+			}
+		}
+	}
+}

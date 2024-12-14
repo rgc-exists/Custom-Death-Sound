@@ -1,0 +1,29 @@
+// Not needed anymore... for now.
+
+/*
+class $modify(MenuLayer) {
+	virtual bool init() {
+		if (!MenuLayer::init()) return false;
+
+		if (!extra_sounds_enabled) {
+			if (extraDeathSounds.size() == 0) {
+				auto alert = geode::createQuickPopup(
+					"Empty Death SFX Directory",
+					"You should store your death sound files for the Death SFX Randomizer mod in "
+					+ getExtraDeathSoundsPath().string() + ".\n\nSupported types are: .ogg, .wav, .mp3, .flac",   // content
+					"Okay", "Go to folder",
+					[](auto, bool btn2) {
+						if (btn2) {
+							utils::file::openFolder(getExtraDeathSoundsPath());
+						}
+					}, false
+				);
+				alert->m_scene = this;
+				alert->show();
+			}
+		} else
+
+		return true;
+	}
+};
+*/

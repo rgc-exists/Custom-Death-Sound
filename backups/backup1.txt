@@ -1,0 +1,26 @@
+// Couldn't use since you can't modify FMOD::Channel at this time.
+
+/*
+class $modify(FMOD::Channel) {
+
+	FMOD_RESULT stop() {
+		log::debug("stopChannel");
+		if (Mod::get()->getSettingValue<bool>("continue-playing")) {
+			for (std::map<std::string, FMOD::Sound*>::iterator snd = deathSounds.begin(); snd != deathSounds.end(); ++snd) {
+				FMOD::Sound* sound;
+				FMOD_RESULT fmod_result = getCurrentSound(&sound);
+				if (fmod_result == FMOD_OK) {
+					if (snd->second == sound) {
+						return FMOD_OK;
+					}
+				}
+				else {
+					log::warn("channel->getCurrentSound(&sound) did not return FMOD_OK!");
+					return fmod_result;
+				}
+			}
+		}
+		return Channel::stop();
+	}
+};
+*/
