@@ -8,7 +8,7 @@
 	},
 	"id": "rgc_exists.death_sfx_changer",
 	"name": "Custom Death Sound",
-	"version": "v1.0.1",
+	"version": "v1.0.2",
 	"developer": "RGC Exists",
 	"description": "A mod for changing the death sound effect, but with extra randomization features. Pick from a folder of random sounds and randomize the pitch.",
 	"tags": [ "offline", "customization" ],
@@ -22,9 +22,14 @@
 			"filters": [
 				{
 					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
-					"description": "Audo files"
+					"description": "Audio files"
 				}
 			]
+		},
+		"death-sound-enabled": {
+			"type": "bool",
+			"name": "Enable Custom Death Sound(s)",
+			"default": true
 		},
 		"volume": {
 			"name": "Volume",
@@ -81,6 +86,38 @@
 			"default": 1,
 			"min": 0.25,
 			"max": 2.5,
+			"control": {
+				"slider-step": 0.05,
+				"slider": true,
+				"input": true
+			}
+		},
+		"other-sounds-title": {
+			"type": "title",
+			"name": "Other Sounds"
+		},
+		"level-complete-enabled": {
+			"type": "bool",
+			"name": "Enable Custom Level Complete Sound",
+			"default": false
+		},
+		"level-complete-path": {
+			"type": "file",
+			"name": "Level Complete Sound File",
+			"default": "{gd_dir}/resources/endStart_02.ogg",
+			"filters": [
+				{
+					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
+					"description": "Audio files"
+				}
+			]
+		},
+		"level-complete-volume": {
+			"name": "Level Complete Volume",
+			"type": "float",
+			"default": 1,
+			"min": 0.0,
+			"max": 3.0,
 			"control": {
 				"slider-step": 0.05,
 				"slider": true,

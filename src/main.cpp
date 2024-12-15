@@ -13,11 +13,15 @@ using namespace geode::prelude;
 
 static FMOD::Sound* deathSound;
 static std::string deathSoundPath;
+static FMOD::Sound* levelCompleteSound;
+static std::string levelCompleteSoundPath;
 
 static FMOD::Channel* playingChannel; //Only gets set when clear-on-reset setting is false!
 
 static std::map<std::string, FMOD::Sound*> extraDeathSounds;
 static bool extraSoundsEnabled = false;
+static bool deathSoundEnabled = true;
+static bool levelCompleteEnabled = false;
 static bool clearOnReset = true;
 
 std::filesystem::path getDeathSoundPath() {
@@ -25,6 +29,9 @@ std::filesystem::path getDeathSoundPath() {
 }
 std::filesystem::path getExtraDeathSoundsPath() {
 	return Mod::get()->getSettingValue<std::filesystem::path>("extra-sounds-path");
+}
+std::filesystem::path getLevelCompletePath() {
+	return Mod::get()->getSettingValue<std::filesystem::path>("level-complete-path");
 }
 
 void reloadExtraSounds() {
@@ -57,23 +64,43 @@ void reloadSounds() {
 	if (deathSound != nullptr) {
 		deathSound->release();
 	}
+	if (levelCompleteSound != nullptr) {
+		levelCompleteSound->release();
+	}
 
 	log::info("Reloading death sound(s)");
 	if (extraSoundsEnabled) {
 		reloadExtraSounds();
 	}
 	else {
-		std::filesystem::path path = getDeathSoundPath();
+		if (deathSoundEnabled) {
+			std::filesystem::path path = getDeathSoundPath();
+			if (std::filesystem::exists(path)) {
+				FMOD::Sound* sound;
+				std::string pathStr = path.string();
+				if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+					deathSound = sound;
+					deathSoundPath = path.string();
+				}
+			}
+			else {
+				log::warn("Death sound path doesn't exist!");
+			}
+		}
+	}
+
+	if (levelCompleteEnabled) {
+		std::filesystem::path path = getLevelCompletePath();
 		if (std::filesystem::exists(path)) {
 			FMOD::Sound* sound;
 			std::string pathStr = path.string();
 			if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-				deathSound = sound;
-				deathSoundPath = path.string();
+				levelCompleteSound = sound;
+				levelCompleteSoundPath = path.string();
 			}
 		}
 		else {
-			log::warn("Death sound path doesn't exist!");
+			log::warn("Level complete sound path doesn't exist!");
 		}
 	}
 }
@@ -81,6 +108,8 @@ void reloadSounds() {
 $execute{
 	extraSoundsEnabled = Mod::get()->getSettingValue<bool>("extra-sounds-enabled");
 	clearOnReset = Mod::get()->getSettingValue<bool>("clear-on-reset");
+	deathSoundEnabled = Mod::get()->getSettingValue<bool>("death-sound-enabled");
+	levelCompleteEnabled = Mod::get()->getSettingValue<bool>("level-complete-enabled");
 
 	std::filesystem::path defaultPath = Mod::get()->getConfigDir() / "extraDeathSounds";
 	if (!std::filesystem::exists(Mod::get()->getConfigDir())) {
@@ -104,6 +133,17 @@ $execute{
 		extraSoundsEnabled = value;
 		reloadSounds();
 	});
+	listenForSettingChanges("death-sound-enabled", [](bool value) {
+		deathSoundEnabled = value;
+		reloadSounds();
+		});
+	listenForSettingChanges("level-complete-path", [](std::filesystem::path value) {
+		reloadSounds();
+		});
+	listenForSettingChanges("level-complete-enabled", [](bool value) {
+		levelCompleteEnabled = value;
+		reloadSounds();
+		});
 	listenForSettingChanges("clear-on-reset", [](bool value) {
 		clearOnReset = value;
 	});
@@ -118,45 +158,59 @@ class $modify(FMODAudioEngine) {
 		FMOD::Sound* sound;
 		if (path == "explode_11.ogg") {
 
+			if (deathSoundEnabled) {
+				if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
 
-			if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
-
-				auto it = extraDeathSounds.begin();
-				std::advance(it, rand() % extraDeathSounds.size());
-				path = it->first;
-				sound = extraDeathSounds[path];
-			}
-			else if (deathSound != nullptr) {
-				path = deathSoundPath;
-				sound = deathSound;
-			} else {
-				FMODAudioEngine::playEffect(path, speed, p2, volume);
-				return;
-			}
-
-			float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
-			float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
-			if (minPitch >= maxPitch) minPitch = maxPitch;
-			speed = minPitch + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (maxPitch - minPitch)));
-
-			volume = Mod::get()->getSettingValue<double>("volume");
-
-			if (!clearOnReset) {
-
-				FMOD_RESULT result = m_system->playSound(
-					sound,
-					nullptr,
-					false,
-					&playingChannel
-				);
-				if (result == FMOD_OK) {
-					playingChannel->setVolume(volume);
-					playingChannel->setPitch(speed);
+					auto it = extraDeathSounds.begin();
+					std::advance(it, rand() % extraDeathSounds.size());
+					path = it->first;
+					sound = extraDeathSounds[path];
+				}
+				else if (deathSound != nullptr) {
+					path = deathSoundPath;
+					sound = deathSound;
 				}
 				else {
-					log::error("m_system->playSound returned error!");
+					FMODAudioEngine::playEffect(path, speed, p2, volume);
+					return;
 				}
-				return;
+
+				float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
+				float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
+				if (minPitch >= maxPitch) minPitch = maxPitch;
+				speed = minPitch + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (maxPitch - minPitch)));
+
+				volume = Mod::get()->getSettingValue<double>("volume");
+
+				if (!clearOnReset) {
+
+					FMOD_RESULT result = m_system->playSound(
+						sound,
+						nullptr,
+						false,
+						&playingChannel
+					);
+					if (result == FMOD_OK) {
+						playingChannel->setVolume(volume);
+						playingChannel->setPitch(speed);
+					}
+					else {
+						log::error("m_system->playSound returned error!");
+					}
+					return;
+				}
+			}
+
+		} else if (path == "endStart_02.ogg") {
+			if (levelCompleteEnabled) {
+				if (levelCompleteSound != nullptr) {
+					path = levelCompleteSoundPath;
+				}
+				else {
+					FMODAudioEngine::playEffect(path, speed, p2, volume);
+					return;
+				}
+				volume = Mod::get()->getSettingValue<double>("level-complete-volume");
 			}
 		}
 
