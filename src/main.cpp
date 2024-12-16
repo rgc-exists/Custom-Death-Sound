@@ -191,7 +191,7 @@ class $modify(FMODAudioEngine) {
 						&playingChannel
 					);
 					if (result == FMOD_OK) {
-						playingChannel->setVolume(volume);
+						playingChannel->setVolume(volume * getEffectsVolume());
 						playingChannel->setPitch(speed);
 					}
 					else {
