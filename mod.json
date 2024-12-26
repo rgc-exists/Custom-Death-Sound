@@ -14,6 +14,7 @@
 	"tags": [ "offline", "customization" ],
 	"resources": {
 	},
+	"links": { "source": "https://github.com/rgc-exists/Custom-Death-Sound" },
 	"settings": {
 		"sound-path": {
 			"type": "file",

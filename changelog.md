@@ -1,5 +1,5 @@
 # 1.0.3
-- Fixed in-game SFX volume setting not affecting the death sound when "Stop Sound On Reset" is off. 
+- Fixed in-game SFX volume setting not affecting the death sound when "Stop Sound On Reset" is off.  
 (Note that this was the first release on the Geode index.)
 
 # 1.0.2
