@@ -1,3 +1,7 @@
+# 1.0.4
+- Rename "Extra death sounds" to "Multiple death sounds" due to the possibly misleading name.
+- Add YouTube tutorial to about.md
+
 # 1.0.3
 - Fixed in-game SFX volume setting not affecting the death sound when "Stop Sound On Reset" is off.  
 (Note that this was the first release on the Geode index.)

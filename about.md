@@ -9,6 +9,9 @@ A mod for changing the death sound effect (AND level complete sound), but with e
 - Make the death sound NOT clear after the level resets
 - MULTIPLE custom death sounds from a directory (randomly picked each death.)
 
+# Tutorial
+If you don't feel like following the text-based instructions below, there is a [YouTube tutorial](https://youtu.be/PfiAdGd8rWI) for it.
+
 # How To Use
 ## To change the death sound:
 - Locate the mod in the "installed mods" tab in the Geode UI
