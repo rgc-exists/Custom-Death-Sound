@@ -62,7 +62,8 @@
 		"extra-sounds-path": {
 			"type": "folder",
 			"name": "Multiple Death Sounds Directory",
-			"default": "{mod_config_dir}/extraDeathSounds"
+			"default": "{mod_config_dir}/extraDeathSounds",
+			"enable-if": "extra-sounds-enabled"
 		},
 		"pitch-randomization-title": {
 			"type": "title",
@@ -100,7 +101,8 @@
 		"level-complete-enabled": {
 			"type": "bool",
 			"name": "Enable Custom Level Complete Sound",
-			"default": false
+			"default": false,
+			"enable-if": "extra-sounds-enabled"
 		},
 		"level-complete-path": {
 			"type": "file",
@@ -111,7 +113,8 @@
 					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
 					"description": "Audio files"
 				}
-			]
+			],
+			"enable-if": "level-complete-enabled"
 		},
 		"level-complete-volume": {
 			"name": "Level Complete Volume",
@@ -123,7 +126,8 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			}
+			},
+			"enable-if": "level-complete-enabled"
 		}
 	}
 }
