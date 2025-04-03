@@ -1,7 +1,15 @@
 cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+# At the beginning of your CMakeLists.txt, change this:
+#  set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+# into:
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
+    set(CMAKE_OSX_ARCHITECTURES "arm64")
+else()
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+endif()
+
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 project(DeathSFXChanger VERSION 1.0.0)
