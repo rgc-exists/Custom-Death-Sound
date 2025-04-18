@@ -3,11 +3,17 @@ A mod for changing the death sound effect (AND level complete sound), but with e
 
 # Features
 - A custom death sound (file types: .ogg, .wav, .mp3, .flac)
+- MULTIPLE custom death sounds from a directory (randomly picked each death.)
 - A custom LEVEL COMPLETE sound effect
 - Volume customization
 - Pitch randomization
+- Mute the death sound
+- Mute the level complete sound
 - Make the death sound NOT clear after the level resets
-- MULTIPLE custom death sounds from a directory (randomly picked each death.)
+
+## Lack of iOS Support
+No iOS support is planned since as far as I can tell you can't play a sound from the iOS file system, sorry. :(  
+If anyone can find an alternative to this, feel free to make a pull request!
 
 # Tutorial
 If you don't feel like following the text-based instructions below, there is a [YouTube tutorial](https://youtu.be/PfiAdGd8rWI) for it.

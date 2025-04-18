@@ -11,18 +11,23 @@
 using namespace geode::prelude;
 
 
-static FMOD::Sound* deathSound;
-static std::string deathSoundPath;
-static FMOD::Sound* levelCompleteSound;
-static std::string levelCompleteSoundPath;
+FMOD::Sound* deathSound;
+std::string deathSoundPath;
+FMOD::Sound* levelCompleteSound;
+std::string levelCompleteSoundPath;
 
-static FMOD::Channel* playingChannel; //Only gets set when clear-on-reset setting is false!
+FMOD::Channel* playingChannel; //Only gets set when clear-on-reset setting is false!
 
-static std::map<std::string, FMOD::Sound*> extraDeathSounds;
-static bool extraSoundsEnabled = false;
-static bool deathSoundEnabled = true;
-static bool levelCompleteEnabled = false;
-static bool clearOnReset = true;
+std::map<std::string, FMOD::Sound*> extraDeathSounds;
+
+bool extraSoundsEnabled = false;
+bool deathSoundEnabled = true;
+bool muteDeathSound = false;
+
+bool levelCompleteEnabled = false;
+bool muteLevelComplete = false;
+
+bool clearOnReset = true;
 
 std::filesystem::path getDeathSoundPath() {
 	return Mod::get()->getSettingValue<std::filesystem::path>("sound-path");
@@ -110,6 +115,8 @@ $execute{
 	clearOnReset = Mod::get()->getSettingValue<bool>("clear-on-reset");
 	deathSoundEnabled = Mod::get()->getSettingValue<bool>("death-sound-enabled");
 	levelCompleteEnabled = Mod::get()->getSettingValue<bool>("level-complete-enabled");
+	muteDeathSound = Mod::get()->getSettingValue<bool>("mute-death-sound");
+	muteLevelComplete = Mod::get()->getSettingValue<bool>("mute-level-complete");
 
 	std::filesystem::path defaultPath = Mod::get()->getConfigDir() / "extraDeathSounds";
 	if (!std::filesystem::exists(Mod::get()->getConfigDir())) {
@@ -128,11 +135,11 @@ $execute{
 		});
 	listenForSettingChanges("extra-sounds-path", [](std::filesystem::path value) {
 		reloadSounds();
-	});
+		});
 	listenForSettingChanges("extra-sounds-enabled", [](bool value) {
 		extraSoundsEnabled = value;
 		reloadSounds();
-	});
+		});
 	listenForSettingChanges("death-sound-enabled", [](bool value) {
 		deathSoundEnabled = value;
 		reloadSounds();
@@ -146,7 +153,13 @@ $execute{
 		});
 	listenForSettingChanges("clear-on-reset", [](bool value) {
 		clearOnReset = value;
-	});
+		});
+	listenForSettingChanges("mute-death-sound", [](bool value) {
+		muteDeathSound = value;
+		});
+	listenForSettingChanges("mute-level-complete", [](bool value) {
+		muteLevelComplete = value;
+		});
 
 }
 
@@ -157,6 +170,8 @@ class $modify(FMODAudioEngine) {
 
 		FMOD::Sound* sound;
 		if (path == "explode_11.ogg") {
+			if (muteDeathSound)
+				return;
 
 			if (deathSoundEnabled) {
 				if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
@@ -202,6 +217,9 @@ class $modify(FMODAudioEngine) {
 			}
 
 		} else if (path == "endStart_02.ogg") {
+			if (muteLevelComplete)
+				return;
+
 			if (levelCompleteEnabled) {
 				if (levelCompleteSound != nullptr) {
 					path = levelCompleteSoundPath;

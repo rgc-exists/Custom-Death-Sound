@@ -1,3 +1,8 @@
+# 1.0.5
+- Add "Mute Death Sound" and "Mute Level Complete Sound" settings.
+- Fix the custom level complete SFX only being available in the settings menu when multiple death sounds is enabled.
+- You can only change the single file path when "Multiple Death Sounds" is off (and vice versa.)
+
 # 1.0.4
 - Rename "Extra death sounds" to "Multiple death sounds" due to the possibly misleading name.
 - Add YouTube tutorial to about.md

@@ -3,12 +3,11 @@
 	"gd": {
 		"win": "2.2074",
 		"android": "2.2074",
-		"mac": "2.2074",
-		"ios": "2.2074"
+		"mac": "2.2074"
 	},
 	"id": "rgc_exists.death_sfx_changer",
 	"name": "Custom Death Sound",
-	"version": "v1.0.4",
+	"version": "v1.0.5",
 	"developer": "RGC Exists",
 	"description": "A mod for changing the death sound effect, but with extra randomization features. Pick from a folder of random sounds and randomize the pitch.",
 	"tags": [ "offline", "customization" ],
@@ -16,6 +15,19 @@
 	},
 	"links": { "source": "https://github.com/rgc-exists/Custom-Death-Sound" },
 	"settings": {
+		"death-sound-enabled": {
+			"type": "bool",
+			"name": "Enable Custom Death Sound(s)",
+			"default": true,
+			"enable-if": "!mute-death-sound"
+		},
+		"mute-death-sound": {
+			"type": "bool",
+			"name": "Mute Death Sound",
+			"default": false,
+			"enable-if": "!death-sound-enabled",
+			"enable-if-description": "Disable the setting 'Enable Custom Death Sound(s)'"
+		},
 		"sound-path": {
 			"type": "file",
 			"name": "Death Sound File",
@@ -25,12 +37,9 @@
 					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
 					"description": "Audio files"
 				}
-			]
-		},
-		"death-sound-enabled": {
-			"type": "bool",
-			"name": "Enable Custom Death Sound(s)",
-			"default": true
+			],
+			"enable-if": "!extra-sounds-enabled && !mute-death-sound",
+			"enable-if-description": "Disable the setting 'Multiple Sounds Enabled' and enable the setting 'Enable Custom Death Sound(s)'"
 		},
 		"volume": {
 			"name": "Volume",
@@ -42,33 +51,38 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			}
+			},
+			"enable-if": "!mute-death-sound"
 		},
 		"clear-on-reset": {
 			"type": "bool",
 			"name": "Stop Sound On Reset",
-			"default": true
+			"default": true,
+			"enable-if": "!mute-death-sound"
 		},
 		"extra-sounds-title": {
 			"type": "title",
-			"name": "Multiple Sounds (Random Pick)",
-			"description": "Import a folder with MULTIPLE sounds and have them chosen from randomly. THIS WILL OVERRIDE YOUR MAIN SOUND!"
+			"name": "Multiple Sounds (Random Pick, Formerly known as \"extra death sounds\")",
+			"description": "Import a folder with MULTIPLE sounds and have them chosen from randomly. THIS WILL OVERRIDE YOUR MAIN SOUND!",
+			"enable-if": "!mute-death-sound"
 		},
 		"extra-sounds-enabled": {
 			"type": "bool",
-			"name": "Multiple Sounds Enabled (Formerly known as \"extra death sounds\")",
-			"default": false
+			"name": "Multiple Sounds Enabled",
+			"default": false,
+			"enable-if": "!mute-death-sound"
 		},
 		"extra-sounds-path": {
 			"type": "folder",
 			"name": "Multiple Death Sounds Directory",
 			"default": "{mod_config_dir}/extraDeathSounds",
-			"enable-if": "extra-sounds-enabled"
+			"enable-if": "extra-sounds-enabled && !mute-death-sound"
 		},
 		"pitch-randomization-title": {
 			"type": "title",
 			"name": "Pitch Randomization",
-			"description": "Control the minimum and maximum pitch multiplier for the death sound(s). Setting both to the same value will make it constant."
+			"description": "Control the minimum and maximum pitch multiplier for the death sound(s). Setting both to the same value will make it constant.",
+			"enable-if": "!mute-death-sound"
 		},
 		"pitch-minimum": {
 			"name": "Pitch Minimum",
@@ -80,7 +94,8 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			}
+			},
+			"enable-if": "!mute-death-sound"
 		},
 		"pitch-maximum": {
 			"name": "Pitch Maximum",
@@ -92,7 +107,8 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			}
+			},
+			"enable-if": "!mute-death-sound"
 		},
 		"other-sounds-title": {
 			"type": "title",
@@ -102,7 +118,14 @@
 			"type": "bool",
 			"name": "Enable Custom Level Complete Sound",
 			"default": false,
-			"enable-if": "extra-sounds-enabled"
+			"enable-if": "!mute-level-complete"
+		},
+		"mute-level-complete": {
+			"type": "bool",
+			"name": "Mute Level Complete Sound",
+			"default": false,
+			"enable-if": "!level-complete-enabled",
+			"enable-if-description": "Disable the setting 'Enable Custom Level Complete Sound'"
 		},
 		"level-complete-path": {
 			"type": "file",
