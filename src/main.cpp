@@ -166,12 +166,12 @@ $execute{
 
 
 class $modify(FMODAudioEngine) {
-	void playEffect(gd::string path, float speed, float p2, float volume) {
+	int playEffect(gd::string path, float speed, float p2, float volume) {
 
 		FMOD::Sound* sound;
 		if (path == "explode_11.ogg") {
 			if (muteDeathSound)
-				return;
+				return 1;
 
 			if (deathSoundEnabled) {
 				if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
@@ -187,7 +187,7 @@ class $modify(FMODAudioEngine) {
 				}
 				else {
 					FMODAudioEngine::playEffect(path, speed, p2, volume);
-					return;
+					return 1;
 				}
 
 				float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
@@ -212,13 +212,13 @@ class $modify(FMODAudioEngine) {
 					else {
 						log::error("m_system->playSound returned error!");
 					}
-					return;
+					return 1;
 				}
 			}
 
 		} else if (path == "endStart_02.ogg") {
 			if (muteLevelComplete)
-				return;
+				return 1;
 
 			if (levelCompleteEnabled) {
 				if (levelCompleteSound != nullptr) {
@@ -226,12 +226,12 @@ class $modify(FMODAudioEngine) {
 				}
 				else {
 					FMODAudioEngine::playEffect(path, speed, p2, volume);
-					return;
+					return 1;
 				}
 				volume = Mod::get()->getSettingValue<double>("level-complete-volume");
 			}
 		}
 
-		FMODAudioEngine::playEffect(path, speed, p2, volume);
+		return FMODAudioEngine::playEffect(path, speed, p2, volume);
 	}
 };
