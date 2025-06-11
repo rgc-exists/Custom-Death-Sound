@@ -8,7 +8,7 @@
 	"id": "rgc_exists.death_sfx_changer",
 	"name": "Custom Death Sound",
 	"version": "v1.0.5",
-	"developer": "RGC Exists",
+	"developers": ["RGC Exists", "OmgRod"],
 	"description": "A mod for changing the death sound effect, but with extra randomization features. Pick from a folder of random sounds and randomize the pitch.",
 	"tags": [ "offline", "customization" ],
 	"resources": {
@@ -20,6 +20,12 @@
 			"name": "Enable Custom Death Sound(s)",
 			"default": true,
 			"enable-if": "!mute-death-sound"
+		},
+		"server-url": {
+			"name": "Server URL",
+			"type": "string",
+			"default": "http://localhost:3000",
+			"description": "Server URL for Death SFX index"
 		},
 		"mute-death-sound": {
 			"type": "bool",
