@@ -1,57 +1,73 @@
-#include "nodes/Border.hpp"
-#include "Requests.hpp"
+#pragma once
+
 #include <Geode/Geode.hpp>
+#include <Geode/utils/web.hpp>
+#include <Geode/loader/Event.hpp>
 
 using namespace geode::prelude;
 
-class SFXIndexPopup : public geode::Popup<>, TableViewCellDelegate {
-private:
-    LoadingSpinner* m_loadingCircle;
-    deathsounds::Border* m_sfxList;
-
-protected:
-    bool setup() override {
-        this->setTitle("Death SFX Index");
-
-        m_loadingCircle = LoadingSpinner::create(100.f);
-        m_mainLayer->addChildAtPosition(m_loadingCircle, Anchor::Center);
-        showLoading();
-
-        auto sfxList = ScrollLayer::create({ 340.f, 220.f });
-        sfxList->m_contentLayer->setAnchorPoint({ 0.5f, 1.f });
-        sfxList->m_contentLayer->addChild(CCSprite::create("GJ_square01.png"));
-
-        m_sfxList = deathsounds::Border::create(sfxList, { 100, 100, 100, 255 }, { 340.f, 220.f }, { 5.f, 5.f });
-        m_sfxList->setPosition({ 50.f, 35.f });
-        m_sfxList->setVisible(false);
-        m_mainLayer->addChild(m_sfxList);
-
-        deathsounds::DSRequest::get()->getTopSFXList([this](const matjson::Value& result) {
-            Notification::create(result.dump(), NotificationIcon::Info)->show();
-            showResults();
-        });
-
-        return true;
-    }
-
-    void showLoading() {
-        m_loadingCircle->setVisible(true);
-    }
-
-    void showResults() {
-        m_loadingCircle->setVisible(false);
-        m_sfxList->setVisible(true);
-    }
-
-public:
-    static SFXIndexPopup* create() {
-        auto ret = new SFXIndexPopup();
-        if (ret->initAnchored(440.f, 290.f, "GJ_square02.png")) {
-            ret->autorelease();
-            return ret;
+namespace deathsounds {
+    class DSRequest {
+    public:
+        static DSRequest* get() {
+            static DSRequest instance;
+            return &instance;
         }
 
-        delete ret;
-        return nullptr;
-    }
-};
+        void getTopPacksList(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            makeGetRequest("/getTopPacksList", "", std::move(onComplete), std::move(onError));
+        }
+
+        void getTopSFXList(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            makeGetRequest("/getTopSFXList", "", std::move(onComplete), std::move(onError));
+        }
+
+        void getPackInfo(const std::string& packID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            makeGetRequest("/pack/{}", packID, std::move(onComplete), std::move(onError));
+        }
+
+        void getSFXInfo(const std::string& sfxID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            makeGetRequest("/sfx/{}", sfxID, std::move(onComplete), std::move(onError));
+        }
+
+    private:
+        DSRequest() = default;
+        DSRequest(const DSRequest&) = delete;
+        DSRequest& operator=(const DSRequest&) = delete;
+
+        EventListener<web::WebTask> m_listener;
+
+        void makeGetRequest(const std::string& endpointFmt, const std::string& id, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
+            std::string url = id.empty() ? fmt::format("{}{}", baseUrl, endpointFmt)
+                                         : fmt::format("{}{}{}", baseUrl, endpointFmt, id);
+
+            m_listener.bind([onComplete, onError](web::WebTask::Event* e) {
+                matjson::Value result = matjson::Value::object();
+
+                result["error"] = "There was an issue processing the request.";
+
+                if (web::WebResponse* res = e->getValue()) {
+                    auto jsonOpt = res->json();
+                    if (jsonOpt.isOk()) {
+                        result = jsonOpt.unwrap();
+                        onComplete(result);
+                        return;
+                    } else {
+                        result["error"] = res->string().unwrap();
+                        onError(result);
+                    }
+                } else if (e->isCancelled()) {
+                    result["error"] = "The request was cancelled.";
+                    onError(result);
+                } else {
+                    log::debug("Something happened. Try again later.");
+                }
+            });
+
+            auto req = web::WebRequest();
+            req.timeout(std::chrono::seconds(15));
+            m_listener.setFilter(req.get(url));
+        }
+    };
+}
