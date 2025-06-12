@@ -1,73 +1,76 @@
-#pragma once
-
+#include "nodes/Border.hpp"
+#include "Requests.hpp"
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
-#include <Geode/loader/Event.hpp>
 
 using namespace geode::prelude;
 
-namespace deathsounds {
-    class DSRequest {
-    public:
-        static DSRequest* get() {
-            static DSRequest instance;
-            return &instance;
+class SFXIndexPopup : public geode::Popup<>, TableViewCellDelegate {
+private:
+    LoadingSpinner* m_loadingCircle;
+    deathsounds::Border* m_sfxList;
+
+protected:
+    bool setup() override {
+        this->setTitle("Death SFX Index");
+
+        auto menu = CCMenu::create();
+        menu->setPosition({ 0.f, 0.f });
+        menu->setAnchorPoint({ 0.f, 0.f });
+        m_mainLayer->addChild(menu);
+
+        m_loadingCircle = LoadingSpinner::create(100.f);
+        m_mainLayer->addChildAtPosition(m_loadingCircle, Anchor::Center);
+        
+        auto sfxList = ScrollLayer::create({ 340.f, 220.f });
+        sfxList->m_contentLayer->setAnchorPoint({ 0.5f, 1.f });
+        sfxList->m_contentLayer->addChild(CCSprite::create("GJ_square01.png"));
+        
+        m_sfxList = deathsounds::Border::create(sfxList, { 100, 100, 100, 255 }, { 340.f, 220.f }, { 5.f, 5.f });
+        m_sfxList->setPosition({ 50.f, 35.f });
+        m_sfxList->setVisible(false);
+        m_mainLayer->addChild(m_sfxList);
+        
+        auto refreshButton = CCMenuItemSpriteExtra::create(
+            CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png"),
+            this,
+            menu_selector(SFXIndexPopup::refreshPage)
+        );
+        menu->addChild(refreshButton);
+        
+        refreshPage(nullptr);
+
+        return true;
+    }
+
+    void showLoading() {
+        m_loadingCircle->setVisible(true);
+        m_sfxList->setVisible(false);
+    }
+
+    void showResults() {
+        m_loadingCircle->setVisible(false);
+        m_sfxList->setVisible(true);
+    }
+
+    void refreshPage(CCObject*) {
+        showLoading();
+        deathsounds::DSRequest::get()->getTopSFXList([this](const matjson::Value& result) {
+            showResults(); // pass result as param later
+        }, [this](const matjson::Value& result) {
+            Notification::create(result.object().parse("error").unwrapOr("Unknown error.").dump(), NotificationIcon::Error)->show();
+            showResults();
+        });
+    }
+
+public:
+    static SFXIndexPopup* create() {
+        auto ret = new SFXIndexPopup();
+        if (ret->initAnchored(440.f, 290.f, "GJ_square02.png")) {
+            ret->autorelease();
+            return ret;
         }
 
-        void getTopPacksList(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/getTopPacksList", "", std::move(onComplete), std::move(onError));
-        }
-
-        void getTopSFXList(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/getTopSFXList", "", std::move(onComplete), std::move(onError));
-        }
-
-        void getPackInfo(const std::string& packID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/pack/{}", packID, std::move(onComplete), std::move(onError));
-        }
-
-        void getSFXInfo(const std::string& sfxID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/sfx/{}", sfxID, std::move(onComplete), std::move(onError));
-        }
-
-    private:
-        DSRequest() = default;
-        DSRequest(const DSRequest&) = delete;
-        DSRequest& operator=(const DSRequest&) = delete;
-
-        EventListener<web::WebTask> m_listener;
-
-        void makeGetRequest(const std::string& endpointFmt, const std::string& id, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
-            std::string url = id.empty() ? fmt::format("{}{}", baseUrl, endpointFmt)
-                                         : fmt::format("{}{}{}", baseUrl, endpointFmt, id);
-
-            m_listener.bind([onComplete, onError](web::WebTask::Event* e) {
-                matjson::Value result = matjson::Value::object();
-
-                result["error"] = "There was an issue processing the request.";
-
-                if (web::WebResponse* res = e->getValue()) {
-                    auto jsonOpt = res->json();
-                    if (jsonOpt.isOk()) {
-                        result = jsonOpt.unwrap();
-                        onComplete(result);
-                        return;
-                    } else {
-                        result["error"] = res->string().unwrap();
-                        onError(result);
-                    }
-                } else if (e->isCancelled()) {
-                    result["error"] = "The request was cancelled.";
-                    onError(result);
-                } else {
-                    log::debug("Something happened. Try again later.");
-                }
-            });
-
-            auto req = web::WebRequest();
-            req.timeout(std::chrono::seconds(15));
-            m_listener.setFilter(req.get(url));
-        }
-    };
-}
+        delete ret;
+        return nullptr;
+    }
+};
