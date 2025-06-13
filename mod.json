@@ -31,7 +31,8 @@
 			"name": "Server URL",
 			"type": "string",
 			"default": "http://localhost:3000",
-			"description": "Server URL for Death SFX index"
+			"description": "Server URL for Death SFX index",
+			"match": ".*"
 		},
 		"mute-death-sound": {
 			"type": "bool",
