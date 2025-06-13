@@ -25,12 +25,14 @@ namespace deathsounds {
             return &instance;
         }
 
-        void getTopPacksList(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/getTopPacksList", "", std::move(onComplete), std::move(onError));
+        void getTopPacksList(bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::string query = recent ? "?recent=1" : "";
+            makeGetRequest("/getTopPacksList", query, std::move(onComplete), std::move(onError));
         }
 
-        void getTopSFXList(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/getTopSFXList", "", std::move(onComplete), std::move(onError));
+        void getTopSFXList(bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::string query = recent ? "?recent=1" : "";
+            makeGetRequest("/getTopSFXList", query, std::move(onComplete), std::move(onError));
         }
 
         void getPackInfo(const std::string& packID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
@@ -48,14 +50,12 @@ namespace deathsounds {
 
         EventListener<web::WebTask> m_listener;
 
-        void makeGetRequest(const std::string& endpointFmt, const std::string& id, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+        void makeGetRequest(const std::string& endpointFmt, const std::string& query, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
             std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
-            std::string url = id.empty() ? fmt::format("{}{}", baseUrl, endpointFmt)
-                                         : fmt::format("{}{}{}", baseUrl, endpointFmt, id);
+            std::string url = fmt::format("{}{}{}", baseUrl, endpointFmt, query);
 
             m_listener.bind([onComplete, onError](web::WebTask::Event* e) {
                 matjson::Value result = matjson::Value::object();
-
                 result["error"] = "There was an issue processing the request.";
 
                 if (web::WebResponse* res = e->getValue()) {
@@ -71,8 +71,6 @@ namespace deathsounds {
                 } else if (e->isCancelled()) {
                     result["error"] = "The request was cancelled.";
                     onError(result);
-                } else {
-                    log::debug("Something happened. Try again later.");
                 }
             });
 
