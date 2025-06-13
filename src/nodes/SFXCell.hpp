@@ -2,7 +2,7 @@
 
 using namespace geode::prelude;
 
-std::string formatDate(int64_t millis) {
+std::string formatDate(int32_t millis) {
     using namespace std::chrono;
     std::time_t seconds = static_cast<std::time_t>(millis);
     std::tm local_tm = fmt::localtime(seconds);
@@ -12,7 +12,7 @@ std::string formatDate(int64_t millis) {
 namespace deathsounds {
     class SFXCell : public CCLayer {
     public:
-        bool init(int index, std::string id, std::string name, int downloads, int createdAt) {
+        bool init(int index, std::string id, std::string name, int downloads, int32_t createdAt) {
             if (!CCLayer::init()) {
                 return false;
             }
@@ -85,7 +85,7 @@ namespace deathsounds {
             return true;
         }
 
-        static SFXCell* create(int index, std::string id, std::string name, int downloads, int createdAt) {
+        static SFXCell* create(int index, std::string id, std::string name, int downloads, int32_t createdAt) {
             auto ret = new SFXCell();
             if (ret && ret->init(index, id, name, downloads, createdAt)) {
                 ret->autorelease();

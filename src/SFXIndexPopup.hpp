@@ -101,7 +101,7 @@ protected:
 
         int index = 0;
         for (auto& sfxItem : result) {
-            auto cellTest = deathsounds::SFXCell::create(index, sfxItem["id"].asString().unwrap(), sfxItem["name"].asString().unwrap(), sfxItem["downloads"].asInt().unwrap(), sfxItem["createdAt"].asInt().unwrap());
+            auto cellTest = deathsounds::SFXCell::create(index, sfxItem["id"].asString().unwrap(), sfxItem["name"].asString().unwrap(), sfxItem["downloads"].asInt().unwrap(), static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap()));
             m_sfxList->m_contentLayer->addChild(cellTest);
             totalHeight += cellTest->getContentHeight();
             m_sfxList->m_contentLayer->setContentSize({ m_sfxList->m_contentLayer->getContentSize().width, totalHeight });
