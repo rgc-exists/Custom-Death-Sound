@@ -64,7 +64,7 @@ namespace deathsounds {
         ) {
             std::string baseUrl = Mod::get()->getSavedValue<std::string>("server-url");
             if (baseUrl.empty()) {
-                baseUrl = "http://localhost:3000";
+                baseUrl = "http://192.168.1.200:3000";
             }
             std::string url = fmt::format("{}{}{}", baseUrl, endpointFmt, query);
 
