@@ -25,13 +25,15 @@ namespace deathsounds {
             return &instance;
         }
 
-        void getTopPacksList(bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            std::string query = recent ? "?recent=1" : "";
+        void getTopPacksList(int page, bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::string query = fmt::format("?page={}", page);
+            if (recent) query += "&recent=1";
             makeGetRequest("/getTopPacksList", query, std::move(onComplete), std::move(onError));
         }
 
-        void getTopSFXList(bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            std::string query = recent ? "?recent=1" : "";
+        void getTopSFXList(int page, bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::string query = fmt::format("?page={}", page);
+            if (recent) query += "&recent=1";
             makeGetRequest("/getTopSFXList", query, std::move(onComplete), std::move(onError));
         }
 
@@ -43,6 +45,10 @@ namespace deathsounds {
             makeGetRequest("/sfx/{}", sfxID, std::move(onComplete), std::move(onError));
         }
 
+        void getSFXCount(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            makeGetRequest("/getSFXCount", "", std::move(onComplete), std::move(onError));
+        }
+
     private:
         DSRequest() = default;
         DSRequest(const DSRequest&) = delete;
@@ -50,11 +56,20 @@ namespace deathsounds {
 
         EventListener<web::WebTask> m_listener;
 
-        void makeGetRequest(const std::string& endpointFmt, const std::string& query, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+        void makeGetRequest(
+            const std::string& endpointFmt,
+            const std::string& query,
+            std::function<void(const matjson::Value&)> onComplete,
+            std::function<void(const matjson::Value&)> onError
+        ) {
             std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
             std::string url = fmt::format("{}{}{}", baseUrl, endpointFmt, query);
 
-            m_listener.bind([onComplete, onError](web::WebTask::Event* e) {
+            auto req = web::WebRequest();
+            req.timeout(std::chrono::seconds(30));
+
+            auto listener = std::make_shared<EventListener<web::WebTask>>();
+            listener->bind([onComplete, onError, listener](web::WebTask::Event* e) {
                 matjson::Value result = matjson::Value::object();
                 result["error"] = "There was an issue processing the request.";
 
@@ -74,9 +89,7 @@ namespace deathsounds {
                 }
             });
 
-            auto req = web::WebRequest();
-            req.timeout(std::chrono::seconds(15));
-            m_listener.setFilter(req.get(url));
+            listener->setFilter(req.get(url));
         }
     };
 }

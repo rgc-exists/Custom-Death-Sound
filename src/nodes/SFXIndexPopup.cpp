@@ -1,5 +1,7 @@
 #include "SFXIndexPopup.hpp"
 
+using namespace geode::prelude;
+
 bool SFXIndexPopup::setup() {
     this->setTitle("Death SFX Index");
 
@@ -57,7 +59,36 @@ bool SFXIndexPopup::setup() {
     menu->addChild(refreshButton);
     
     refreshPage(nullptr);
-
+    
+    auto nextPageSprite = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+    nextPageSprite->setFlipX(true);
+    
+    m_nextPageBtn = CCMenuItemSpriteExtra::create(
+        nextPageSprite,
+        this,
+        menu_selector(SFXIndexPopup::nextPage)
+    );
+    m_nextPageBtn->setPosition({ 415.f, 145.f });
+    menu->addChild(m_nextPageBtn);
+    
+    auto prevPageSprite = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+    prevPageSprite->setFlipX(false);
+    
+    m_prevPageBtn = CCMenuItemSpriteExtra::create(
+        prevPageSprite,
+        this,
+        menu_selector(SFXIndexPopup::prevPage)
+    );
+    m_prevPageBtn->setPosition({ 25.f, 145.f });
+    menu->addChild(m_prevPageBtn);
+    
+    int pageMax = m_currentPage * 10 + 10;
+    m_pageLabel = CCLabelBMFont::create("", "goldFont.fnt");
+    m_pageLabel->setScale(0.5f);
+    m_pageLabel->setAnchorPoint({ 0.f, 0.f });
+    m_pageLabel->setPosition({ 10.f, 10.f });
+    m_mainLayer->addChild(m_pageLabel);
+    
     return true;
 }
 
@@ -72,6 +103,7 @@ void SFXIndexPopup::loadingError(const char* text) {
     m_loadingCircle->setVisible(false);
     m_errorText->setString(text);
     m_errorText->setVisible(true);
+    m_clippingNode->setVisible(false);
 }
 
 void SFXIndexPopup::showResults(const matjson::Value& result) {
@@ -82,19 +114,24 @@ void SFXIndexPopup::showResults(const matjson::Value& result) {
 
     m_sfxList->m_contentLayer->removeAllChildrenWithCleanup(true);
 
+    if (result.contains("error")) {
+        loadingError(result["error"].asString().unwrap().c_str());
+        return;
+    }
+
     float totalHeight = 0.f;
 
     int index = 0;
     for (auto& sfxItem : result) {
-        auto cellTest = deathsounds::SFXCell::create(
+        auto cell = deathsounds::SFXCell::create(
             index,
             sfxItem["id"].asString().unwrap(),
             sfxItem["name"].asString().unwrap(),
             sfxItem["downloads"].asInt().unwrap(),
             static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap())
         );
-        m_sfxList->m_contentLayer->addChild(cellTest);
-        totalHeight += cellTest->getContentHeight();
+        m_sfxList->m_contentLayer->addChild(cell);
+        totalHeight += cell->getContentHeight();
         m_sfxList->m_contentLayer->setContentSize({ m_sfxList->m_contentLayer->getContentSize().width, totalHeight });
         ++index;
     }
@@ -107,12 +144,50 @@ void SFXIndexPopup::showResults(const matjson::Value& result) {
 
 void SFXIndexPopup::refreshPage(CCObject*) {
     showLoading();
-    deathsounds::DSRequest::get()->getTopSFXList(m_recent, [this](const matjson::Value& result) {
-        showResults(result);
-    }, [this](const matjson::Value& result) {
-        std::string errorStr = result["error"].asString().unwrap();
-        loadingError(errorStr.c_str());
-    });
+
+    deathsounds::DSRequest::get()->getTopSFXList(
+        m_currentPage,
+        m_recent,
+        [this](const matjson::Value& result) {
+            showResults(result["data"]);
+
+            if (!result.contains("error")) {
+                int maxPage = result["totalPages"].asInt().unwrap();
+
+                if (m_prevPageBtn)
+                    m_prevPageBtn->setVisible(m_currentPage > 1);
+
+                if (m_nextPageBtn)
+                    m_nextPageBtn->setVisible(m_currentPage < maxPage);
+
+                if (m_pageLabel) {
+                    int pageMax = m_currentPage * 10;
+                    m_pageLabel->setString(fmt::format(
+                        "Page {} of {}",
+                        m_currentPage,
+                        result["totalPages"].asInt().unwrap()
+                    ).c_str());
+                }
+            } else {
+                std::string errorStr = result["error"].asString().unwrap();
+                loadingError(errorStr.c_str());
+            }
+        },
+        [this](const matjson::Value& result) {
+            std::string errorStr = result["error"].asString().unwrap();
+            loadingError(errorStr.c_str());
+        }
+    );
+}
+
+void SFXIndexPopup::nextPage(CCObject* sender) {
+    m_currentPage += 1;
+    refreshPage(sender);
+}
+
+void SFXIndexPopup::prevPage(CCObject* sender) {
+    m_currentPage -= 1;
+    refreshPage(sender);
 }
 
 SFXIndexPopup* SFXIndexPopup::create() {

@@ -15,6 +15,10 @@ private:
     CCLabelBMFont* m_errorText;
     CCClippingNode* m_clippingNode;
     bool m_recent = false;
+    int m_currentPage = 1;
+    CCLabelBMFont* m_pageLabel;
+    CCMenuItemSpriteExtra* m_nextPageBtn;
+    CCMenuItemSpriteExtra* m_prevPageBtn;
 
 protected:
     bool setup() override;
@@ -23,6 +27,8 @@ protected:
     void loadingError(const char* text);
     void showResults(const matjson::Value& result);
     void refreshPage(CCObject*);
+    void nextPage(CCObject*);
+    void prevPage(CCObject*);
 
 public:
     static SFXIndexPopup* create();
