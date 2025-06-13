@@ -27,7 +27,6 @@ protected:
         m_mainLayer->addChildAtPosition(m_loadingCircle, Anchor::Center);
 
         m_sfxList = ScrollLayer::create({ 340.f, 220.f });
-        // m_sfxList->m_contentLayer->setAnchorPoint({ 0.5f, 1.f });
         
         auto columnLayout = ColumnLayout::create();
         columnLayout->setAxisReverse(true)

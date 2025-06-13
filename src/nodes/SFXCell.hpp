@@ -3,8 +3,10 @@
 using namespace geode::prelude;
 
 std::string formatDate(int64_t millis) {
-    std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(millis));
-    return fmt::format("{:%Y-%m-%d}\n", tp);
+    using namespace std::chrono;
+    std::time_t seconds = static_cast<std::time_t>(millis);
+    std::tm local_tm = fmt::localtime(seconds);
+    return fmt::format("{:%Y-%m-%d}", local_tm);
 }
 
 namespace deathsounds {
@@ -56,7 +58,11 @@ namespace deathsounds {
             sfxToggle->setPosition({ menu->getContentWidth() - 30.f, menu->getContentHeight() / 2 });
             menu->addChild(sfxToggle);*/
 
-            auto nameLabel = CCLabelBMFont::create(name.c_str(), "bigFont.fnt");
+            std::string displayName = name;
+            if (displayName.size() > 25) {
+                displayName = displayName.substr(0, 25) + "...";
+            }
+            auto nameLabel = CCLabelBMFont::create(displayName.c_str(), "bigFont.fnt");
             nameLabel->setAnchorPoint({ 0.f, 1.f });
             nameLabel->setScale(0.5f);
             nameLabel->setPosition({ 10.f, widget->getContentHeight() - 10.f });
@@ -72,7 +78,7 @@ namespace deathsounds {
             downloadsText->setPosition({ 30.f, 20.f });
             widget->addChild(downloadsText);
 
-            auto infoButton = InfoAlertButton::create(name, fmt::format("<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}", formatDate(createdAt), downloads), 0.5f);
+            auto infoButton = InfoAlertButton::create(displayName, fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}", name, formatDate(createdAt), downloads), 0.5f);
             infoButton->setPosition(menu->getContentSize() - 10.f);
             menu->addChild(infoButton);
 
