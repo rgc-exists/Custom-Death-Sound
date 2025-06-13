@@ -62,7 +62,10 @@ namespace deathsounds {
             std::function<void(const matjson::Value&)> onComplete,
             std::function<void(const matjson::Value&)> onError
         ) {
-            std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
+            std::string baseUrl = Mod::get()->getSavedValue<std::string>("server-url");
+            if (baseUrl.empty()) {
+                baseUrl = "http://localhost:3000";
+            }
             std::string url = fmt::format("{}{}{}", baseUrl, endpointFmt, query);
 
             auto req = web::WebRequest();
