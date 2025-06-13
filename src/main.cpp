@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PauseLayer.hpp>
-#include "SFXIndexPopup.hpp"
+#include "nodes/SFXIndexPopup.hpp"
 
 using namespace geode::prelude;
 

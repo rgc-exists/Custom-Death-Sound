@@ -4,8 +4,6 @@
 
 using namespace geode::prelude;
 
-std::string formatDate(int32_t millis);
-
 namespace deathsounds {
     class SFXCell : public CCLayer {
     public:

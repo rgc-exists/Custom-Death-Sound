@@ -1,11 +1,5 @@
 #include "SFXCell.hpp"
-
-std::string formatDate(int32_t millis) {
-    using namespace std::chrono;
-    std::time_t seconds = static_cast<std::time_t>(millis);
-    std::tm local_tm = fmt::localtime(seconds);
-    return fmt::format("{:%Y-%m-%d}", local_tm);
-}
+#include "../Utils.hpp"
 
 namespace deathsounds {
     bool SFXCell::init(int index, std::string id, std::string name, int downloads, int32_t createdAt/*, int likes, int dislikes*/) {
@@ -113,7 +107,7 @@ namespace deathsounds {
         auto infoButton = InfoAlertButton::create(
             displayName,
             fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}", 
-                name, formatDate(createdAt), downloads),
+                name, deathsounds::utils::formatDate(createdAt), downloads),
             0.5f
         );
         infoButton->setPosition(menu->getContentSize() - 10.f);
