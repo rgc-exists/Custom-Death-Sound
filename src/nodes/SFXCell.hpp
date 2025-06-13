@@ -3,7 +3,7 @@
 using namespace geode::prelude;
 
 std::string formatDate(int64_t millis) {
-    std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(1749500909106));
+    std::chrono::system_clock::time_point tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(millis));
     return fmt::format("{:%Y-%m-%d}\n", tp);
 }
 
