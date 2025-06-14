@@ -30,9 +30,9 @@
 		"server-url": {
 			"name": "Server URL",
 			"type": "string",
-			"default": "http://localhost:3000",
+			"default": "https://deathsounds.omgrod.me",
 			"description": "Server URL for Death SFX index",
-			"match": ".*"
+			"filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:/"
 		},
 		"mute-death-sound": {
 			"type": "bool",
