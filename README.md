@@ -1,3 +1,5 @@
+# NOTE: This repository is currently showing an UNFINISHED "update" to the mod. There's a good chance it'll never get completed, but it's too late to undo it, so please go to the [original-mod branch](https://github.com/rgc-exists/Custom-Death-Sound/tree/original-mod) to see the version that is currently uploaded to Geode.
+
 # Custom Death Sound
 A mod for changing the death sound effect (and level complete sound), but with extra features. 
 
