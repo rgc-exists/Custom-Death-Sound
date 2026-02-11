@@ -1,3 +1,6 @@
+# 1.0.6-beta.1
+- Update to 2.2081
+
 # 1.0.5
 - Add "Mute Death Sound" and "Mute Level Complete Sound" settings.
 - Fix the custom level complete SFX only being available in the settings menu when multiple death sounds is enabled.
