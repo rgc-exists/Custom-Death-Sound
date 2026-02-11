@@ -1,3 +1,7 @@
+/*
+NOTE TO INDEX MODS CHECKING THIS CODE: This repository's main branch is currently showing an UNFINISHED "update" to the mod. There's a good chance it'll never get completed, but it's too late to undo it, so please go to the [original-mod branch](https://github.com/rgc-exists/Custom-Death-Sound/tree/original-mod) to see the version that is currently submitted to Geode.
+*/
+
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 #include "nodes/SFXIndexPopup.hpp"
