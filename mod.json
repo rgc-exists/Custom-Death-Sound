@@ -1,12 +1,12 @@
 {
-	"geode": "4.3.1",
+	"geode": "5.0.0-alpha.2",
 	"gd": {
-		"win": "2.2074",
-		"android": "2.2074",
-		"mac": "2.2074"
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081"
 	},
 	"id": "rgc_exists.death_sfx_changer",
-	"name": "Custom Death Sound Legacy",
+	"name": "Custom Death Sound",
 	"version": "v1.0.5",
 	"developer": "RGC Exists",
 	"description": "A mod for changing the death sound effect, but with extra randomization features. Pick from a folder of random sounds and randomize the pitch.",

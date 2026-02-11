@@ -130,34 +130,34 @@ $execute{
 	reloadSounds();
 
 
-	listenForSettingChanges("sound-path", [](std::filesystem::path value) {
+	listenForSettingChanges<std::filesystem::path>("sound-path", [](std::filesystem::path value) {
 		reloadSounds();
 		});
-	listenForSettingChanges("extra-sounds-path", [](std::filesystem::path value) {
+	listenForSettingChanges<std::filesystem::path>("extra-sounds-path", [](std::filesystem::path value) {
 		reloadSounds();
 		});
-	listenForSettingChanges("extra-sounds-enabled", [](bool value) {
+	listenForSettingChanges<bool>("extra-sounds-enabled", [](bool value) {
 		extraSoundsEnabled = value;
 		reloadSounds();
 		});
-	listenForSettingChanges("death-sound-enabled", [](bool value) {
+	listenForSettingChanges<bool>("death-sound-enabled", [](bool value) {
 		deathSoundEnabled = value;
 		reloadSounds();
 		});
-	listenForSettingChanges("level-complete-path", [](std::filesystem::path value) {
+	listenForSettingChanges<std::filesystem::path>("level-complete-path", [](std::filesystem::path value) {
 		reloadSounds();
 		});
-	listenForSettingChanges("level-complete-enabled", [](bool value) {
+	listenForSettingChanges<bool>("level-complete-enabled", [](bool value) {
 		levelCompleteEnabled = value;
 		reloadSounds();
 		});
-	listenForSettingChanges("clear-on-reset", [](bool value) {
+	listenForSettingChanges<bool>("clear-on-reset", [](bool value) {
 		clearOnReset = value;
 		});
-	listenForSettingChanges("mute-death-sound", [](bool value) {
+	listenForSettingChanges<bool>("mute-death-sound", [](bool value) {
 		muteDeathSound = value;
 		});
-	listenForSettingChanges("mute-level-complete", [](bool value) {
+	listenForSettingChanges<bool>("mute-level-complete", [](bool value) {
 		muteLevelComplete = value;
 		});
 
