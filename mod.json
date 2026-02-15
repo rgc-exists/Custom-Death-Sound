@@ -13,7 +13,7 @@
 	"tags": [ "offline", "customization" ],
 	"resources": {
 	},
-	"links": { "source": "https://github.com/rgc-exists/Custom-Death-Sound" },
+	"links": { "source": "https://github.com/rgc-exists/Custom-Death-Sound/tree/original-mod" },
 	"settings": {
 		"death-sound-enabled": {
 			"type": "bool",
