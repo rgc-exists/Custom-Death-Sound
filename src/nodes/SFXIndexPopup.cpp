@@ -135,6 +135,7 @@ void SFXIndexPopup::showResults(const matjson::Value& result) {
             index,
             sfxItem["id"].asString().unwrap(),
             sfxItem["name"].asString().unwrap(),
+            sfxItem["url"].asString().unwrap(),
             sfxItem["downloads"].asInt().unwrap(),
             static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap())
         );

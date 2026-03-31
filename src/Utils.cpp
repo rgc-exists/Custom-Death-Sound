@@ -1,0 +1,273 @@
+#include "Utils.hpp"
+
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <vector>
+
+namespace deathsounds::utils {
+    namespace {
+        uint16_t readU16LE(std::vector<uint8_t> const& bytes, size_t offset) {
+            return static_cast<uint16_t>(bytes[offset]) |
+                   (static_cast<uint16_t>(bytes[offset + 1]) << 8);
+        }
+
+        uint32_t readU32LE(std::vector<uint8_t> const& bytes, size_t offset) {
+            return static_cast<uint32_t>(bytes[offset]) |
+                   (static_cast<uint32_t>(bytes[offset + 1]) << 8) |
+                   (static_cast<uint32_t>(bytes[offset + 2]) << 16) |
+                   (static_cast<uint32_t>(bytes[offset + 3]) << 24);
+        }
+
+        void writeU16LE(std::ofstream& out, uint16_t value) {
+            char b[2] = {
+                static_cast<char>(value & 0xFF),
+                static_cast<char>((value >> 8) & 0xFF),
+            };
+            out.write(b, 2);
+        }
+
+        void writeU32LE(std::ofstream& out, uint32_t value) {
+            char b[4] = {
+                static_cast<char>(value & 0xFF),
+                static_cast<char>((value >> 8) & 0xFF),
+                static_cast<char>((value >> 16) & 0xFF),
+                static_cast<char>((value >> 24) & 0xFF),
+            };
+            out.write(b, 4);
+        }
+
+        bool convertPcm24WavToPcm16(std::filesystem::path const& inputPath, std::filesystem::path const& outputPath) {
+            std::ifstream in(inputPath, std::ios::binary);
+            if (!in) {
+                return false;
+            }
+
+            std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            if (bytes.size() < 44) {
+                return false;
+            }
+
+            if (std::memcmp(bytes.data(), "RIFF", 4) != 0 || std::memcmp(bytes.data() + 8, "WAVE", 4) != 0) {
+                return false;
+            }
+
+            size_t fmtOffset = 0;
+            uint32_t fmtSize = 0;
+            size_t dataOffset = 0;
+            uint32_t dataSize = 0;
+
+            for (size_t pos = 12; pos + 8 <= bytes.size();) {
+                auto chunkId = reinterpret_cast<char const*>(bytes.data() + pos);
+                uint32_t chunkSize = readU32LE(bytes, pos + 4);
+                size_t chunkDataPos = pos + 8;
+                if (chunkDataPos + chunkSize > bytes.size()) {
+                    break;
+                }
+
+                if (std::memcmp(chunkId, "fmt ", 4) == 0) {
+                    fmtOffset = chunkDataPos;
+                    fmtSize = chunkSize;
+                } else if (std::memcmp(chunkId, "data", 4) == 0) {
+                    dataOffset = chunkDataPos;
+                    dataSize = chunkSize;
+                }
+
+                pos = chunkDataPos + chunkSize + (chunkSize & 1u);
+            }
+
+            if (fmtOffset == 0 || dataOffset == 0 || fmtSize < 16) {
+                return false;
+            }
+
+            uint16_t audioFormat = readU16LE(bytes, fmtOffset + 0);
+            uint16_t channels = readU16LE(bytes, fmtOffset + 2);
+            uint32_t sampleRate = readU32LE(bytes, fmtOffset + 4);
+            uint16_t bitsPerSample = readU16LE(bytes, fmtOffset + 14);
+
+            if (audioFormat != 1 || bitsPerSample != 24 || channels == 0) {
+                return false;
+            }
+
+            if (dataSize < 3 || dataOffset + dataSize > bytes.size() || dataSize % 3 != 0) {
+                return false;
+            }
+
+            uint32_t sampleCount = dataSize / 3;
+            uint32_t convertedDataSize = sampleCount * 2;
+
+            std::ofstream out(outputPath, std::ios::binary | std::ios::trunc);
+            if (!out) {
+                return false;
+            }
+
+            out.write("RIFF", 4);
+            writeU32LE(out, 36u + convertedDataSize);
+            out.write("WAVE", 4);
+
+            out.write("fmt ", 4);
+            writeU32LE(out, 16u);
+            writeU16LE(out, 1u);
+            writeU16LE(out, channels);
+            writeU32LE(out, sampleRate);
+            writeU32LE(out, sampleRate * channels * 2u);
+            writeU16LE(out, static_cast<uint16_t>(channels * 2u));
+            writeU16LE(out, 16u);
+
+            out.write("data", 4);
+            writeU32LE(out, convertedDataSize);
+
+            for (uint32_t i = 0; i < sampleCount; ++i) {
+                size_t src = dataOffset + static_cast<size_t>(i) * 3;
+                int32_t sample = static_cast<int32_t>(bytes[src]) |
+                                (static_cast<int32_t>(bytes[src + 1]) << 8) |
+                                (static_cast<int32_t>(bytes[src + 2]) << 16);
+                if (sample & 0x00800000) {
+                    sample |= ~0x00FFFFFF;
+                }
+                int16_t outSample = static_cast<int16_t>(sample >> 8);
+                char pcm16[2] = {
+                    static_cast<char>(outSample & 0xFF),
+                    static_cast<char>((outSample >> 8) & 0xFF),
+                };
+                out.write(pcm16, 2);
+            }
+
+            return static_cast<bool>(out);
+        }
+    }
+
+    std::string formatDate(int32_t timestamp) {
+        using namespace std::chrono;
+        auto seconds = static_cast<time_t>(timestamp);
+        auto tp = system_clock::from_time_t(seconds);
+        return fmt::format("{:%Y-%m-%d}", tp);
+    }
+
+    std::filesystem::path getSfxDownloadPath(std::string const& sfxId, std::string const& sfxUrl) {
+        auto downloadsDir = Mod::get()->getConfigDir() / "downloaded-sfx";
+
+        std::string filename = sfxId + ".wav";
+        if (!sfxUrl.empty()) {
+            auto cleanUrl = sfxUrl;
+            auto queryPos = cleanUrl.find_first_of("?#");
+            if (queryPos != std::string::npos) {
+                cleanUrl = cleanUrl.substr(0, queryPos);
+            }
+            auto slashPos = cleanUrl.find_last_of('/');
+            if (slashPos != std::string::npos && slashPos + 1 < cleanUrl.size()) {
+                filename = cleanUrl.substr(slashPos + 1);
+            }
+        }
+
+        return downloadsDir / filename;
+    }
+
+    std::filesystem::path getSfxPlayablePath(std::string const& sfxId, std::string const& sfxUrl) {
+        auto originalPath = getSfxDownloadPath(sfxId, sfxUrl);
+        auto convertedPath = originalPath;
+        convertedPath += ".16.wav";
+        if (std::filesystem::exists(convertedPath)) {
+            return convertedPath;
+        }
+        return originalPath;
+    }
+
+    std::string makeSfxDownloadUrl(std::string const& sfxUrl) {
+        if (sfxUrl.empty()) {
+            return "";
+        }
+
+        if (sfxUrl.rfind("http://", 0) == 0 || sfxUrl.rfind("https://", 0) == 0) {
+            return sfxUrl;
+        }
+
+        std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
+        if (baseUrl.empty()) {
+            return "";
+        }
+
+        bool baseHasSlash = !baseUrl.empty() && baseUrl.back() == '/';
+        bool pathHasSlash = !sfxUrl.empty() && sfxUrl.front() == '/';
+
+        if (baseHasSlash && pathHasSlash) {
+            return baseUrl + sfxUrl.substr(1);
+        }
+        if (!baseHasSlash && !pathHasSlash) {
+            return baseUrl + "/" + sfxUrl;
+        }
+        return baseUrl + sfxUrl;
+    }
+
+    bool startPreviewPlayback(
+        PreviewPlaybackState& state,
+        std::filesystem::path const& originalPath,
+        std::string const& sfxName,
+        std::string const& sfxId
+    ) {
+        auto fmod = FMODAudioEngine::sharedEngine();
+
+        if (!std::filesystem::exists(originalPath)) {
+            auto absPath = std::filesystem::absolute(originalPath);
+            log::warn("[SFX Preview] File missing for '{}' ({}) at {}:1", sfxName, sfxId, absPath.string());
+            return false;
+        }
+
+        stopPreviewPlayback(state);
+
+        auto soundPath = originalPath;
+        auto existingConvertedPath = originalPath;
+        existingConvertedPath += ".16.wav";
+        if (std::filesystem::exists(existingConvertedPath)) {
+            soundPath = existingConvertedPath;
+        }
+
+        auto absSoundPath = std::filesystem::absolute(soundPath);
+        FMOD_RESULT createResult = fmod->m_system->createSound(soundPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+        if (createResult != FMOD_OK && soundPath == originalPath) {
+            auto convertedPath = originalPath;
+            convertedPath += ".16.wav";
+            if (convertPcm24WavToPcm16(originalPath, convertedPath)) {
+                log::info("[SFX Preview] Converted 24-bit WAV to 16-bit for '{}' ({}) -> {}:1", sfxName, sfxId, std::filesystem::absolute(convertedPath).string());
+                createResult = fmod->m_system->createSound(convertedPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+                if (createResult == FMOD_OK) {
+                    soundPath = convertedPath;
+                    absSoundPath = std::filesystem::absolute(soundPath);
+                }
+            }
+        }
+
+        if (createResult != FMOD_OK) {
+            log::error("[SFX Preview] createSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(createResult), absSoundPath.string());
+            state.sound = nullptr;
+            return false;
+        }
+
+        FMOD_RESULT playResult = fmod->m_system->playSound(state.sound, nullptr, false, &state.channel);
+        if (playResult != FMOD_OK) {
+            log::error("[SFX Preview] playSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(playResult), absSoundPath.string());
+            state.sound->release();
+            state.sound = nullptr;
+            state.channel = nullptr;
+            return false;
+        }
+
+        state.playing = true;
+        log::info("[SFX Preview] Playing '{}' ({}) from {}:1", sfxName, sfxId, absSoundPath.string());
+        return true;
+    }
+
+    void stopPreviewPlayback(PreviewPlaybackState& state) {
+        if (state.channel) {
+            state.channel->stop();
+            state.channel = nullptr;
+        }
+
+        if (state.sound) {
+            state.sound->release();
+            state.sound = nullptr;
+        }
+
+        state.playing = false;
+    }
+}
