@@ -135,7 +135,7 @@ void deathsounds::Border::setNode(CCNode* node) {
     CCNode* content = this->getChildByID("border_content"_spr);
 
     // Can't assume an ID as the node is a user input and may have its ID changed
-    if (CCNode* oldNode = cocos::getChild<CCNode>(content, 0)) {
+    if (CCNode* oldNode = content->getChildByIndex(0)) {
         // Not going to mess with releasing the node, I'll leave that to the user
         oldNode->removeFromParent();
     }
@@ -146,8 +146,12 @@ void deathsounds::Border::setNode(CCNode* node) {
 }
 
 CCNode* deathsounds::Border::getNode() {
-    if (CCNode* node = cocos::getChild<CCNode>(this->getChildByID("border_content"_spr), 0)) {
-        return node;
+    if (auto border = getChildByID("border_content"_spr)) {
+        if (CCNode* node = border->getChildByType<CCNode>(0)) {
+            return node;
+        } else {
+            return nullptr;
+        }
     } else {
         return nullptr;
     }

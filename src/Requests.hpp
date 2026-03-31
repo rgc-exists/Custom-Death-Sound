@@ -16,6 +16,7 @@
 #include <Geode/loader/Event.hpp>
 
 using namespace geode::prelude;
+using namespace geode::utils::web;
 
 namespace deathsounds {
     class DSRequest {
@@ -26,27 +27,27 @@ namespace deathsounds {
         }
 
         void getTopPacksList(int page, bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            std::string query = fmt::format("?page={}", page);
-            if (recent) query += "&recent=1";
-            makeGetRequest("/getTopPacksList", query, std::move(onComplete), std::move(onError));
+            std::vector<std::pair<std::string, std::string>> params = { {"page", std::to_string(page)} };
+            if (recent) {
+                params.emplace_back("recent", "1");
+            }
+            makeGetRequest("/getTopPacksList", params, std::move(onComplete), std::move(onError));
         }
 
         void getTopSFXList(int page, bool recent, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            std::string query = fmt::format("?page={}", page);
-            if (recent) query += "&recent=1";
-            makeGetRequest("/getTopSFXList", query, std::move(onComplete), std::move(onError));
+            std::vector<std::pair<std::string, std::string>> params = { {"page", std::to_string(page)} };
+            if (recent) {
+                params.emplace_back("recent", "1");
+            }
+            makeGetRequest("/getTopSFXList", params, std::move(onComplete), std::move(onError));
         }
 
         void getPackInfo(const std::string& packID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/pack/{}", packID, std::move(onComplete), std::move(onError));
+            makeGetRequest(fmt::format("/pack/{}", packID), {}, std::move(onComplete), std::move(onError));
         }
 
         void getSFXInfo(const std::string& sfxID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/sfx/{}", sfxID, std::move(onComplete), std::move(onError));
-        }
-
-        void getSFXCount(std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
-            makeGetRequest("/getSFXCount", "", std::move(onComplete), std::move(onError));
+            makeGetRequest(fmt::format("/sfx/{}", sfxID), {}, std::move(onComplete), std::move(onError));
         }
 
     private:
@@ -54,42 +55,46 @@ namespace deathsounds {
         DSRequest(const DSRequest&) = delete;
         DSRequest& operator=(const DSRequest&) = delete;
 
-        EventListener<web::WebTask> m_listener;
+        async::TaskHolder<WebResponse> m_listener;
 
         void makeGetRequest(
             const std::string& endpointFmt,
-            const std::string& query,
+            const std::vector<std::pair<std::string, std::string>>& queryParams,
             std::function<void(const matjson::Value&)> onComplete,
             std::function<void(const matjson::Value&)> onError
         ) {
             std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
-            std::string url = fmt::format("{}{}{}", baseUrl, endpointFmt, query);
+            std::string url = fmt::format("{}{}", baseUrl, endpointFmt);
 
             auto req = web::WebRequest();
             req.timeout(std::chrono::seconds(30));
 
-            auto listener = std::make_shared<EventListener<web::WebTask>>();
-            listener->bind([onComplete, onError, listener](web::WebTask::Event* e) {
-                matjson::Value result = matjson::Value::object();
-                result["error"] = "There was an issue processing the request.";
+            for (const auto& [key, value] : queryParams) {
+                req.param(key, value);
+            }
 
-                if (web::WebResponse* res = e->getValue()) {
-                    auto jsonOpt = res->json();
-                    if (jsonOpt.isOk()) {
-                        result = jsonOpt.unwrap();
-                        onComplete(result);
-                        return;
+            m_listener.spawn(
+                req.get(url),
+                [onComplete, onError](WebResponse value) {
+                    matjson::Value result = matjson::Value::object();
+                    result["error"] = "There was an issue processing the request.";
+
+                    if (value.ok()) {
+                        auto jsonOpt = value.json();
+                        if (jsonOpt.isOk()) {
+                            result = jsonOpt.unwrap();
+                            onComplete(result);
+                            return;
+                        } else {
+                            result["error"] = value.string().unwrap();
+                            onError(result);
+                        }
                     } else {
-                        result["error"] = res->string().unwrap();
+                        result["error"] = "Request failed with code " + std::to_string(value.code());
                         onError(result);
                     }
-                } else if (e->isCancelled()) {
-                    result["error"] = "The request was cancelled.";
-                    onError(result);
                 }
-            });
-
-            listener->setFilter(req.get(url));
+            );
         }
     };
 }

@@ -1,8 +1,11 @@
 #include "SFXIndexPopup.hpp"
+#include "GUI/CCControlExtension/CCScale9Sprite.h"
 
 using namespace geode::prelude;
 
-bool SFXIndexPopup::setup() {
+bool SFXIndexPopup::init() {
+    if (!Popup::init(440.f, 290.f, "GJ_square02.png")) return false;
+
     this->setTitle("Death SFX Index");
 
     auto menu = CCMenu::create();
@@ -104,6 +107,8 @@ void SFXIndexPopup::loadingError(const char* text) {
     m_errorText->setString(text);
     m_errorText->setVisible(true);
     m_clippingNode->setVisible(false);
+    m_prevPageBtn->setVisible(false);
+    m_nextPageBtn->setVisible(false);
 }
 
 void SFXIndexPopup::showResults(const matjson::Value& result) {
@@ -111,6 +116,9 @@ void SFXIndexPopup::showResults(const matjson::Value& result) {
     m_errorText->setVisible(false);
 
     m_clippingNode->setVisible(true);
+
+    m_prevPageBtn->setVisible(true);
+    m_nextPageBtn->setVisible(true);
 
     m_sfxList->m_contentLayer->removeAllChildrenWithCleanup(true);
 
@@ -192,7 +200,7 @@ void SFXIndexPopup::prevPage(CCObject* sender) {
 
 SFXIndexPopup* SFXIndexPopup::create() {
     auto ret = new SFXIndexPopup();
-    if (ret->initAnchored(440.f, 290.f, "GJ_square02.png")) {
+    if (ret->init()) {
         ret->autorelease();
         return ret;
     }

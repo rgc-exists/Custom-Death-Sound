@@ -32,32 +32,42 @@ namespace deathsounds {
         widgetBG->setAnchorPoint({ 0.f, 0.f });
         widget->addChild(widgetBG);
 
-        /*
         auto sfxToggle = CCMenuItemExt::createToggler(
             CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png"),
             CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png"),
-            [&](CCMenuItemToggler* toggler) {
+            [this](CCMenuItemToggler* toggler) {
                 auto fmod = FMODAudioEngine::sharedEngine();
                 if (toggler->isOn()) {
-                    fmod->stopAllEffects();
+                    // ON => play preview
+                    if (this->m_previewPlaying) {
+                        fmod->stopAllEffects();
+                    }
+                    fmod->playEffect("shop.mp3");
+                    this->m_previewPlaying = true;
                 } else {
-                    fmod->playEffect("shop.mp3"); // idk here lmao
-                    // toggler->toggle(false);
+                    // OFF => stop preview
+                    if (this->m_previewPlaying) {
+                        fmod->stopAllEffects();
+                        this->m_previewPlaying = false;
+                    }
                 }
             }
         );
         sfxToggle->setPosition({ menu->getContentWidth() - 30.f, menu->getContentHeight() / 2 });
         menu->addChild(sfxToggle);
-        */
 
         std::string displayName = name;
-        if (displayName.size() > 25) {
-            displayName = displayName.substr(0, 25) + "...";
-        }
         auto nameLabel = CCLabelBMFont::create(displayName.c_str(), "bigFont.fnt");
         nameLabel->setAnchorPoint({ 0.f, 1.f });
-        nameLabel->setScale(0.5f);
         nameLabel->setPosition({ 10.f, widget->getContentHeight() - 10.f });
+        float nameBaseScale = 0.5f;
+        float buttonLeftEdge = sfxToggle->getPositionX() - (sfxToggle->getContentWidth() * sfxToggle->getScaleX() * 0.5f);
+        float maxNameWidth = buttonLeftEdge - nameLabel->getPositionX() - 8.f;
+        float targetScale = nameBaseScale;
+        if (maxNameWidth > 0.f && (nameLabel->getContentWidth() * nameBaseScale) > maxNameWidth) {
+            targetScale = maxNameWidth / nameLabel->getContentWidth();
+        }
+        nameLabel->setScale(targetScale);
         widget->addChild(nameLabel);
 
         auto downloadsSprite = CCSprite::createWithSpriteFrameName("GJ_sDownloadIcon_001.png");

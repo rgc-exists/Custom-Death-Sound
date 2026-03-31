@@ -2,7 +2,7 @@
 
 /*
 class $modify(MenuLayer) {
-	virtual bool init() {
+	bool init() {
 		if (!MenuLayer::init()) return false;
 
 		if (!extra_sounds_enabled) {

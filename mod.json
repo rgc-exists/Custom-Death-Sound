@@ -1,10 +1,10 @@
 {
-	"geode": "4.5.0",
+	"geode": "5.4.1",
 	"gd": {
-		"win": "2.2074",
-		"android": "2.2074",
-		"mac": "2.2074",
-		"ios": "2.2074"
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
 	},
 	"id": "rgc_exists.custom-death-sound-v2",
 	"name": "Custom Death Sound",
@@ -30,9 +30,9 @@
 		"server-url": {
 			"name": "Server URL",
 			"type": "string",
-			"default": "https://deathsounds.omgrod.me",
+			"default": "https://cds.omgrod.me",
 			"description": "Server URL for Death SFX index",
-			"filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:/"
+			"filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:/.-"
 		},
 		"mute-death-sound": {
 			"type": "bool",
@@ -45,12 +45,13 @@
 			"type": "file",
 			"name": "Death Sound File",
 			"default": "{gd_dir}/resources/explode_11.ogg",
-			"filters": [
-				{
-					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
+			"control": {
+				"dialog": "open",
+				"filters": [{
+					"files": ["*.ogg", "*.wav", "*.mp3", "*.flac"],
 					"description": "Audio files"
-				}
-			],
+				}]
+			},
 			"enable-if": "!extra-sounds-enabled && !mute-death-sound",
 			"enable-if-description": "Disable the setting 'Multiple Sounds Enabled' and enable the setting 'Enable Custom Death Sound(s)'"
 		},
@@ -76,8 +77,7 @@
 		"extra-sounds-title": {
 			"type": "title",
 			"name": "Multiple Sounds (Random Pick, Formerly known as \"extra death sounds\")",
-			"description": "Import a folder with MULTIPLE sounds and have them chosen from randomly. THIS WILL OVERRIDE YOUR MAIN SOUND!",
-			"enable-if": "!mute-death-sound"
+			"description": "Import a folder with MULTIPLE sounds and have them chosen from randomly. THIS WILL OVERRIDE YOUR MAIN SOUND!"
 		},
 		"extra-sounds-enabled": {
 			"type": "bool",
@@ -94,8 +94,7 @@
 		"pitch-randomization-title": {
 			"type": "title",
 			"name": "Pitch Randomization",
-			"description": "Control the minimum and maximum pitch multiplier for the death sound(s). Setting both to the same value will make it constant.",
-			"enable-if": "!mute-death-sound"
+			"description": "Control the minimum and maximum pitch multiplier for the death sound(s). Setting both to the same value will make it constant."
 		},
 		"pitch-minimum": {
 			"name": "Pitch Minimum",
@@ -144,13 +143,14 @@
 			"type": "file",
 			"name": "Level Complete Sound File",
 			"default": "{gd_dir}/resources/endStart_02.ogg",
-			"filters": [
-				{
-					"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
+			"enable-if": "level-complete-enabled",
+			"control": {
+				"dialog": "open",
+				"filters": [{
+					"files": ["*.ogg", "*.wav", "*.mp3", "*.flac"],
 					"description": "Audio files"
-				}
-			],
-			"enable-if": "level-complete-enabled"
+				}]
+			}
 		},
 		"level-complete-volume": {
 			"name": "Level Complete Volume",
@@ -167,9 +167,6 @@
 		}
 	},
 	"dependencies": {
-		"geode.node-ids": {
-			"importance": "required",
-			"version": ">=v1.20.1"
-		}
+		"geode.node-ids": ">=v1.20.1"
 	}
 }

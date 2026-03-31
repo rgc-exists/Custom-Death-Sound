@@ -7,7 +7,7 @@
 
 using namespace geode::prelude;
 
-class SFXIndexPopup : public geode::Popup<>, SetTextPopupDelegate {
+class SFXIndexPopup : public geode::Popup, SetTextPopupDelegate {
 private:
     LoadingSpinner* m_loadingCircle;
     deathsounds::Border* m_sfxBorder;
@@ -21,7 +21,7 @@ private:
     CCMenuItemSpriteExtra* m_prevPageBtn;
 
 protected:
-    bool setup() override;
+    bool init();
 
     void showLoading();
     void loadingError(const char* text);
