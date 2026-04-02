@@ -2,6 +2,7 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
 #include <Geode/modify/MenuLayer.hpp>
+#include "Utils.hpp"
 
 using namespace geode::prelude;
 
@@ -13,6 +14,8 @@ std::string levelCompleteSoundPath;
 FMOD::Channel* playingChannel; //Only gets set when clear-on-reset setting is false!
 
 std::map<std::string, FMOD::Sound*> extraDeathSounds;
+std::map<std::string, FMOD::Sound*> selectedOnlineSounds;
+std::vector<std::string> selectedOnlineSoundPaths;
 
 bool extraSoundsEnabled = false;
 bool deathSoundEnabled = true;
@@ -22,6 +25,38 @@ bool levelCompleteEnabled = false;
 bool muteLevelComplete = false;
 
 bool clearOnReset = true;
+
+void reloadSelectedOnlineSounds() {
+	for (auto& [_, sound] : selectedOnlineSounds) {
+		sound->release();
+	}
+	selectedOnlineSounds.clear();
+
+	auto selected = deathsounds::utils::getUsedOnlineSfxPaths();
+	selectedOnlineSoundPaths = selected;
+
+	for (auto const& pathStr : selected) {
+		std::filesystem::path path(pathStr);
+		if (!std::filesystem::exists(path)) {
+			continue;
+		}
+
+		FMOD::Sound* sound = nullptr;
+		if (FMODAudioEngine::sharedEngine()->m_system->createSound(path.string().c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+			selectedOnlineSounds[path.string()] = sound;
+		}
+	}
+
+	log::info("Selected online SFX pool size: {}", selectedOnlineSounds.size());
+}
+
+void refreshSelectedOnlineSoundsIfNeeded() {
+	auto selected = deathsounds::utils::getUsedOnlineSfxPaths();
+	if (selected == selectedOnlineSoundPaths) {
+		return;
+	}
+	reloadSelectedOnlineSounds();
+}
 
 std::filesystem::path getDeathSoundPath() {
 	return Mod::get()->getSettingValue<std::filesystem::path>("sound-path");
@@ -59,6 +94,11 @@ void reloadSounds() {
 		itr->second->release();
 	}
 	extraDeathSounds.clear();
+
+	for (auto& [_, sound] : selectedOnlineSounds) {
+		sound->release();
+	}
+	selectedOnlineSounds.clear();
 	
 	if (deathSound != nullptr) {
 		deathSound->release();
@@ -100,6 +140,8 @@ void reloadSounds() {
 			log::warn("Level complete sound path doesn't exist!");
 		}
 	}
+
+	reloadSelectedOnlineSounds();
 }
 
 $execute{
@@ -156,6 +198,7 @@ $execute{
 
 class $modify(FMODAudioEngine) {
 	int playEffect(gd::string path, float speed, float p2, float volume) {
+		refreshSelectedOnlineSoundsIfNeeded();
 
 		FMOD::Sound* sound;
 		if (path == "explode_11.ogg") {
@@ -163,7 +206,12 @@ class $modify(FMODAudioEngine) {
 				return 1;
 
 			if (deathSoundEnabled) {
-				if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
+				if (selectedOnlineSounds.size() > 0) {
+					auto it = selectedOnlineSounds.begin();
+					std::advance(it, rand() % selectedOnlineSounds.size());
+					path = it->first;
+					sound = selectedOnlineSounds[path];
+				} else if (extraSoundsEnabled && extraDeathSounds.size() > 0) {
 					auto it = extraDeathSounds.begin();
 					std::advance(it, rand() % extraDeathSounds.size());
 					path = it->first;

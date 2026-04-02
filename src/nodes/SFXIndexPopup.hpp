@@ -1,31 +1,70 @@
 #pragma once
 
 #include "Border.hpp"
-#include "SFXCell.hpp"
-#include "../Requests.hpp"
 #include <Geode/Geode.hpp>
+#include <functional>
 
 using namespace geode::prelude;
 
 class SFXIndexPopup : public geode::Popup, SetTextPopupDelegate {
 private:
-    LoadingSpinner* m_loadingCircle;
-    deathsounds::Border* m_sfxBorder;
-    ScrollLayer* m_sfxList;
-    CCLabelBMFont* m_errorText;
-    CCClippingNode* m_clippingNode;
+    enum class Tab {
+        Downloaded,
+        OnlineSounds,
+        SoundPacks,
+    };
+
+    struct TabWidgets {
+        CCLayer* layer = nullptr;
+        LoadingSpinner* loading = nullptr;
+        deathsounds::Border* border = nullptr;
+        ScrollLayer* list = nullptr;
+        CCLabelBMFont* error = nullptr;
+        CCClippingNode* clipping = nullptr;
+    };
+
+    CCLayerMultiplex* m_tabHost = nullptr;
+    TabWidgets m_downloadedWidgets;
+    TabWidgets m_onlineWidgets;
+    TabWidgets m_packWidgets;
     bool m_recent = false;
-    int m_currentPage = 1;
+    int m_downloadedPage = 1;
+    int m_onlinePage = 1;
+    int m_packPage = 1;
     CCLabelBMFont* m_pageLabel;
     CCMenuItemSpriteExtra* m_nextPageBtn;
     CCMenuItemSpriteExtra* m_prevPageBtn;
+    geode::TabButton* m_downloadedTabBtn;
+    geode::TabButton* m_onlineTabBtn;
+    geode::TabButton* m_packsTabBtn;
+    Tab m_activeTab = Tab::OnlineSounds;
+
+    TabWidgets& widgetsForTab(Tab tab);
+    TabWidgets& activeWidgets();
+    TabWidgets createTabWidgets();
+    void setTabLoading(TabWidgets& widgets);
+    void setTabContentVisible(TabWidgets& widgets, bool showPagination);
+    void setTabError(TabWidgets& widgets, char const* text);
+    void setPaginationVisible(bool visible);
+    void setPageText(std::string const& text);
+    int& pageForTab(Tab tab);
+    void populateTabRows(TabWidgets& widgets, std::function<void(int&, float&)> const& appendRow);
 
 protected:
     bool init();
 
     void showLoading();
     void loadingError(const char* text);
-    void showResults(const matjson::Value& result);
+    void showOnlineResults(const matjson::Value& result);
+    void showPackResults(const matjson::Value& result);
+    void showDownloadedResults();
+    void clearList(TabWidgets& widgets);
+    void addSimpleRow(TabWidgets& widgets, int index, const std::string& title, const std::string& subtitle);
+    void updateTabVisuals();
+    void switchTab(Tab tab);
+    void selectDownloadedTab(CCObject*);
+    void selectOnlineTab(CCObject*);
+    void selectPacksTab(CCObject*);
     void refreshPage(CCObject*);
     void nextPage(CCObject*);
     void prevPage(CCObject*);

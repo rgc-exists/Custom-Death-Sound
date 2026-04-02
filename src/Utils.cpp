@@ -1,12 +1,24 @@
 #include "Utils.hpp"
 
-#include <cstdint>
-#include <cstring>
-#include <fstream>
-#include <vector>
-
 namespace deathsounds::utils {
     namespace {
+        constexpr auto kUsedOnlineSfxPathsKey = "used-online-sfx-paths";
+
+        std::filesystem::path metadataPathFor(std::filesystem::path const& soundPath) {
+            auto metadataPath = soundPath;
+            metadataPath += ".meta.json";
+            return metadataPath;
+        }
+
+        std::string normalizePathString(std::filesystem::path const& path) {
+            std::error_code ec;
+            auto absolute = std::filesystem::absolute(path, ec);
+            if (ec) {
+                return path.lexically_normal().string();
+            }
+            return absolute.lexically_normal().string();
+        }
+
         uint16_t readU16LE(std::vector<uint8_t> const& bytes, size_t offset) {
             return static_cast<uint16_t>(bytes[offset]) |
                    (static_cast<uint16_t>(bytes[offset + 1]) << 8);
@@ -173,6 +185,70 @@ namespace deathsounds::utils {
         return originalPath;
     }
 
+    std::filesystem::path getSfxMetadataPath(std::filesystem::path const& soundPath) {
+        return metadataPathFor(soundPath);
+    }
+
+    DownloadedSfxMetadata getDownloadedSfxMetadata(std::filesystem::path const& soundPath) {
+        DownloadedSfxMetadata metadata;
+        metadata.id = soundPath.stem().string();
+        metadata.name = soundPath.stem().string();
+        metadata.path = std::filesystem::absolute(soundPath).string();
+
+        auto metadataPath = getSfxMetadataPath(soundPath);
+        if (!std::filesystem::exists(metadataPath)) {
+            return metadata;
+        }
+
+        std::ifstream in(metadataPath);
+        if (!in) {
+            return metadata;
+        }
+
+        std::string jsonText((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        auto parsed = matjson::parse(jsonText);
+        if (!parsed.isOk()) {
+            return metadata;
+        }
+
+        auto value = parsed.unwrap();
+        if (value.contains("id")) {
+            metadata.id = value["id"].asString().unwrap();
+        }
+        if (value.contains("name")) {
+            metadata.name = value["name"].asString().unwrap();
+        }
+        if (value.contains("path")) {
+            metadata.path = value["path"].asString().unwrap();
+        }
+
+        return metadata;
+    }
+
+    void saveDownloadedSfxMetadata(std::filesystem::path const& soundPath, std::string const& sfxId, std::string const& sfxName) {
+        std::error_code ec;
+        std::filesystem::create_directories(soundPath.parent_path(), ec);
+
+        auto metadataPath = getSfxMetadataPath(soundPath);
+        matjson::Value value = matjson::Value::object();
+        value["id"] = sfxId;
+        value["name"] = sfxName;
+        value["path"] = std::filesystem::absolute(soundPath).string();
+
+        std::ofstream out(metadataPath, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            log::warn("Failed to write SFX metadata file at {}", metadataPath.string());
+            return;
+        }
+
+        out << value.dump(matjson::NO_INDENTATION);
+    }
+
+    void removeDownloadedSfxMetadata(std::filesystem::path const& soundPath) {
+        std::error_code ec;
+        std::filesystem::remove(getSfxMetadataPath(soundPath), ec);
+    }
+
     std::string makeSfxDownloadUrl(std::string const& sfxUrl) {
         if (sfxUrl.empty()) {
             return "";
@@ -197,6 +273,43 @@ namespace deathsounds::utils {
             return baseUrl + "/" + sfxUrl;
         }
         return baseUrl + sfxUrl;
+    }
+
+    std::vector<std::string> getUsedOnlineSfxPaths() {
+        auto paths = Mod::get()->getSavedValue<std::vector<std::string>>(kUsedOnlineSfxPathsKey, {});
+        std::sort(paths.begin(), paths.end());
+        paths.erase(std::unique(paths.begin(), paths.end()), paths.end());
+        return paths;
+    }
+
+    void setUsedOnlineSfxPaths(std::vector<std::string> const& paths) {
+        auto deduped = paths;
+        std::sort(deduped.begin(), deduped.end());
+        deduped.erase(std::unique(deduped.begin(), deduped.end()), deduped.end());
+        Mod::get()->setSavedValue(kUsedOnlineSfxPathsKey, deduped);
+    }
+
+    bool isOnlineSfxPathUsed(std::filesystem::path const& path) {
+        auto normalized = normalizePathString(path);
+        auto usedPaths = getUsedOnlineSfxPaths();
+        return std::find(usedPaths.begin(), usedPaths.end(), normalized) != usedPaths.end();
+    }
+
+    void setOnlineSfxPathUsed(std::filesystem::path const& path, bool used) {
+        auto normalized = normalizePathString(path);
+        auto usedPaths = getUsedOnlineSfxPaths();
+
+        auto it = std::find(usedPaths.begin(), usedPaths.end(), normalized);
+        if (used) {
+            if (it == usedPaths.end()) {
+                usedPaths.push_back(normalized);
+            }
+        }
+        else if (it != usedPaths.end()) {
+            usedPaths.erase(it);
+        }
+
+        setUsedOnlineSfxPaths(usedPaths);
     }
 
     bool startPreviewPlayback(

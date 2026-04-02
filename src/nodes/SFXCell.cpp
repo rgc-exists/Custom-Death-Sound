@@ -1,12 +1,10 @@
 #include "SFXCell.hpp"
 #include "../Utils.hpp"
 #include <Geode/utils/web.hpp>
-#include <unordered_set>
 
 namespace deathsounds {
     namespace {
         std::unordered_set<std::string> s_downloadedSfx;
-        std::unordered_set<std::string> s_inUseSfx;
     }
 
     bool SFXCell::init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt/*, int likes, int dislikes*/) {
@@ -27,7 +25,7 @@ namespace deathsounds {
         m_downloadState = (alreadyDownloaded || s_downloadedSfx.contains(m_sfxId))
             ? DownloadState::Downloaded
             : DownloadState::NotDownloaded;
-        m_inUse = s_inUseSfx.contains(m_sfxId);
+        m_inUse = utils::isOnlineSfxPathUsed(existingPath);
 
         setMouseEnabled(true);
         setTouchEnabled(true);
@@ -66,8 +64,8 @@ namespace deathsounds {
         downloadOnSprite->setScale(actionSpriteScale);
 
         m_downloadToggle = CCMenuItemExt::createToggler(
-            downloadOffSprite,
             downloadOnSprite,
+            downloadOffSprite,
             [this](CCMenuItemToggler*) {
                 this->onDownloadToggle(nullptr);
             }
@@ -82,8 +80,8 @@ namespace deathsounds {
         useOnSprite->setScale(actionSpriteScale);
 
         m_useToggle = CCMenuItemExt::createToggler(
-            useOffSprite,
             useOnSprite,
+            useOffSprite,
             [this](CCMenuItemToggler*) {
                 this->onUseToggle(nullptr);
             }
@@ -251,17 +249,19 @@ namespace deathsounds {
 
         m_downloadState = DownloadState::NotDownloaded;
         m_inUse = false;
+        utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), false);
         s_downloadedSfx.erase(m_sfxId);
-        s_inUseSfx.erase(m_sfxId);
         refreshActionButtons();
     }
 
     void SFXCell::finishDownload() {
+        auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+        utils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name);
         m_downloadState = DownloadState::Downloaded;
         m_inUse = false;
         s_downloadedSfx.insert(m_sfxId);
-        s_inUseSfx.erase(m_sfxId);
-        auto absPath = std::filesystem::absolute(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl));
+        utils::setOnlineSfxPathUsed(downloadPath, false);
+        auto absPath = std::filesystem::absolute(downloadPath);
         log::info("[SFX Download] Ready for use '{}' ({}) at {}:1", m_name, m_sfxId, absPath.string());
         refreshActionButtons();
     }
@@ -282,12 +282,15 @@ namespace deathsounds {
         }
 
         m_inUse = !m_inUse;
-        if (m_inUse) {
-            s_inUseSfx.insert(m_sfxId);
-        }
-        else {
-            s_inUseSfx.erase(m_sfxId);
-        }
+        utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), m_inUse);
+
+        auto selectedPaths = utils::getUsedOnlineSfxPaths();
+        log::info("[SFX Use] {} '{}' ({}) for explode_11.ogg random pool ({} selected)",
+            m_inUse ? "Enabled" : "Disabled",
+            m_name,
+            m_sfxId,
+            selectedPaths.size());
+
         refreshActionButtons();
     }
 
@@ -302,17 +305,19 @@ namespace deathsounds {
                     return;
                 }
 
+                auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
                 m_downloadTask.cancel();
                 std::error_code ec;
-                std::filesystem::remove(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), ec);
+                std::filesystem::remove(downloadPath, ec);
                 std::filesystem::remove(utils::getSfxPlayablePath(m_sfxId, m_sfxUrl), ec);
+                utils::removeDownloadedSfxMetadata(downloadPath);
 
                 stopPreview();
 
                 m_downloadState = DownloadState::NotDownloaded;
                 m_inUse = false;
+                utils::setOnlineSfxPathUsed(downloadPath, false);
                 s_downloadedSfx.erase(m_sfxId);
-                s_inUseSfx.erase(m_sfxId);
                 refreshActionButtons();
             }
         );
@@ -323,16 +328,26 @@ namespace deathsounds {
             return;
         }
 
+        if (!m_menu) {
+            return;
+        }
+
+        const float previewX = m_menu->getContentWidth() - 30.f;
+        const float previewY = m_menu->getContentHeight() / 2;
+        const float actionButtonGap = 38.f;
+
         bool isDownloaded = m_downloadState == DownloadState::Downloaded;
         bool isDownloading = m_downloadState == DownloadState::Downloading;
 
         m_downloadToggle->setVisible(!isDownloaded);
         m_downloadToggle->setEnabled(!isDownloaded);
         m_downloadToggle->toggle(isDownloading);
+        m_downloadToggle->setPosition({ previewX, previewY });
 
         m_useToggle->setVisible(isDownloaded);
         m_useToggle->setEnabled(isDownloaded);
         m_useToggle->toggle(m_inUse);
+        m_useToggle->setPosition({ previewX - actionButtonGap, previewY });
 
         if (isDownloaded) {
             ensurePreviewButton();
@@ -349,12 +364,12 @@ namespace deathsounds {
 
         m_previewToggle = CCMenuItemExt::createToggler(
             [] {
-                auto spr = CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png");
+                auto spr = CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png");
                 spr->setScale(0.8f);
                 return spr;
             }(),
             [] {
-                auto spr = CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png");
+                auto spr = CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png");
                 spr->setScale(0.8f);
                 return spr;
             }(),
