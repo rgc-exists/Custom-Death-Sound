@@ -41,17 +41,29 @@ std::filesystem::path getLevelCompletePath() {
 
 void reloadExtraSounds() {
 	std::filesystem::path path = getExtraDeathSoundsPath();
-	if (std::filesystem::exists(path)) {
+	std::error_code error;
+	if (std::filesystem::exists(path, error)) {
+		if (error) {
+			log::error("Error checking if path {} exists: {}", path, error.message());
+		}
 		std::vector<std::string> exts = { ".ogg", ".wav", ".mp3", ".flac" };
-		for (auto& p : std::filesystem::recursive_directory_iterator(path))
-		{
-			if (std::find(exts.begin(), exts.end(), p.path().extension()) != exts.end()) {
-				FMOD::Sound* sound;
-				std::string pathStr = p.path().string();
-				if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-					extraDeathSounds[pathStr] = sound;
+		std::error_code error;
+
+		try {
+			for (auto& p : std::filesystem::recursive_directory_iterator(path, std::filesystem::directory_options::skip_permission_denied))
+			{
+				if (std::find(exts.begin(), exts.end(), p.path().extension()) != exts.end()) {
+					FMOD::Sound* sound;
+					std::string pathStr = p.path().string();
+					if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+						extraDeathSounds[pathStr] = sound;
+					}
 				}
 			}
+		}
+		catch (int errorCode) {
+			log::error("Error recursively going through directory: {} ERROR CODE: {}", path, errorCode);
+
 		}
 	}
 	else {
@@ -80,12 +92,18 @@ void reloadSounds() {
 	else {
 		if (deathSoundEnabled) {
 			std::filesystem::path path = getDeathSoundPath();
-			if (std::filesystem::exists(path)) {
-				FMOD::Sound* sound;
-				std::string pathStr = path.string();
-				if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-					deathSound = sound;
-					deathSoundPath = path.string();
+			std::error_code error;
+			if (std::filesystem::exists(path, error)) {
+				if (error) {
+					log::error("Error checking if path {} exists: {}", path, error.message());
+				}
+				else {
+					FMOD::Sound* sound;
+					std::string pathStr = path.string();
+					if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+						deathSound = sound;
+						deathSoundPath = path.string();
+					}
 				}
 			}
 			else {
@@ -96,12 +114,18 @@ void reloadSounds() {
 
 	if (levelCompleteEnabled) {
 		std::filesystem::path path = getLevelCompletePath();
-		if (std::filesystem::exists(path)) {
-			FMOD::Sound* sound;
-			std::string pathStr = path.string();
-			if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-				levelCompleteSound = sound;
-				levelCompleteSoundPath = path.string();
+		std::error_code error;
+		if (std::filesystem::exists(path, error)) {
+			if (error) {
+				log::error("Error checking if path {} exists: {}", path, error.message());
+			}
+			else {
+				FMOD::Sound* sound;
+				std::string pathStr = path.string();
+				if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
+					levelCompleteSound = sound;
+					levelCompleteSoundPath = path.string();
+				}
 			}
 		}
 		else {
@@ -110,7 +134,7 @@ void reloadSounds() {
 	}
 }
 
-$execute{
+$on_mod(Loaded) {
 	extraSoundsEnabled = Mod::get()->getSettingValue<bool>("extra-sounds-enabled");
 	clearOnReset = Mod::get()->getSettingValue<bool>("clear-on-reset");
 	deathSoundEnabled = Mod::get()->getSettingValue<bool>("death-sound-enabled");
@@ -118,12 +142,24 @@ $execute{
 	muteDeathSound = Mod::get()->getSettingValue<bool>("mute-death-sound");
 	muteLevelComplete = Mod::get()->getSettingValue<bool>("mute-level-complete");
 
-	std::filesystem::path defaultPath = Mod::get()->getConfigDir() / "extraDeathSounds";
-	if (!std::filesystem::exists(Mod::get()->getConfigDir())) {
-		std::filesystem::create_directory(Mod::get()->getConfigDir());
+	std::error_code error0;
+	if (!std::filesystem::exists(Mod::get()->getConfigDir(), error0)) {
+		if (error0) {
+			log::error("Error checking if path {} exists: {}", Mod::get()->getConfigDir(), error0.message());
+		}
 	}
-	if (!std::filesystem::exists(defaultPath)) {
-		log::info("Default extra death sounds directory does not exist. Creating...");
+
+	std::filesystem::path defaultPath = Mod::get()->getConfigDir() / "extraDeathSounds";
+	std::error_code error1;
+	if (!std::filesystem::exists(defaultPath, error1)) {
+		if (error1) {
+			log::error("Error checking if path {} exists: {}", defaultPath, error1.message());
+		}
+		else {
+			log::info("Default extra death sounds directory does not exist. Creating...");
+			std::filesystem::create_directory(Mod::get()->getConfigDir());
+		}
+	} else {
 		std::filesystem::create_directory(defaultPath);
 	}
 

@@ -1,3 +1,6 @@
+# 1.0.6b
+- Attempt to fix a freeze on startup, not sure if it actually worked as I wasnt able to reproduce it. If anything it happens in the main menu and not the loading screen now.
+
 # 1.0.6
 - Update to 2.2081
 
