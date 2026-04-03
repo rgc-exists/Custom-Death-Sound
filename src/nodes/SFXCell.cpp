@@ -325,9 +325,9 @@ namespace deathsounds {
             m_name.c_str(),
             fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}",
                 m_name, uploadedText, downloadsText),
-            "Delete", "OK",
+            "OK", "Delete",
             [this](FLAlertLayer*, bool btn2) {
-                if (btn2) {
+                if (!btn2) {
                     return;
                 }
 

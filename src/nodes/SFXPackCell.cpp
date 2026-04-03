@@ -388,9 +388,9 @@ namespace deathsounds {
                 m_serverDownloads,
                 m_sfxId
             ),
-            "Delete", "OK",
+            "OK", "Delete",
             [this](FLAlertLayer*, bool btn2) {
-                if (btn2) {
+                if (!btn2) {
                     return;
                 }
 
