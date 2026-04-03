@@ -22,6 +22,8 @@ private:
         deathsounds::Border* border = nullptr;
         ScrollLayer* list = nullptr;
         CCLabelBMFont* error = nullptr;
+        CCMenu* errorMenu = nullptr;
+        CCMenuItemSpriteExtra* resetToFirstPageBtn = nullptr;
         CCClippingNode* clipping = nullptr;
     };
 
@@ -49,7 +51,7 @@ private:
     TabWidgets createTabWidgets();
     void setTabLoading(TabWidgets& widgets);
     void setTabContentVisible(TabWidgets& widgets, bool showPagination);
-    void setTabError(TabWidgets& widgets, char const* text);
+    void setTabError(TabWidgets& widgets, char const* text, bool showResetToFirstPage = false);
     void setPaginationVisible(bool visible);
     void setPageText(std::string const& text);
     int& pageForTab(Tab tab);
@@ -75,6 +77,7 @@ protected:
     void prevPage(CCObject*);
     void openModSettings(CCObject*);
     void openSfxFolder(CCObject*);
+    void resetToFirstPage(CCObject*);
 
 public:
     static SFXIndexPopup* create(bool settingsEnabled);

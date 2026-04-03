@@ -29,6 +29,9 @@ void SFXIndexPopup::setTabLoading(TabWidgets& widgets) {
     widgets.clipping->setVisible(true);
     widgets.border->setVisible(true);
     widgets.error->setVisible(false);
+    if (widgets.errorMenu) {
+        widgets.errorMenu->setVisible(false);
+    }
     if (m_pageLabel) {
         m_pageLabel->setVisible(true);
     }
@@ -37,6 +40,9 @@ void SFXIndexPopup::setTabLoading(TabWidgets& widgets) {
 void SFXIndexPopup::setTabContentVisible(TabWidgets& widgets, bool showPagination) {
     widgets.loading->setVisible(false);
     widgets.error->setVisible(false);
+    if (widgets.errorMenu) {
+        widgets.errorMenu->setVisible(false);
+    }
     widgets.clipping->setVisible(true);
     widgets.border->setVisible(true);
     setPaginationVisible(showPagination);
@@ -45,10 +51,13 @@ void SFXIndexPopup::setTabContentVisible(TabWidgets& widgets, bool showPaginatio
     }
 }
 
-void SFXIndexPopup::setTabError(TabWidgets& widgets, char const* text) {
+void SFXIndexPopup::setTabError(TabWidgets& widgets, char const* text, bool showResetToFirstPage) {
     widgets.loading->setVisible(false);
     widgets.error->setString(text);
     widgets.error->setVisible(true);
+    if (widgets.errorMenu) {
+        widgets.errorMenu->setVisible(showResetToFirstPage);
+    }
     clearList(widgets);
     widgets.clipping->setVisible(true);
     widgets.border->setVisible(true);
@@ -143,6 +152,20 @@ SFXIndexPopup::TabWidgets SFXIndexPopup::createTabWidgets() {
     widgets.error->setScale(0.5f);
     widgets.error->setVisible(false);
     widgets.layer->addChild(widgets.error);
+
+    widgets.errorMenu = CCMenu::create();
+    widgets.errorMenu->setPosition({ 0.f, 0.f });
+    widgets.errorMenu->setVisible(false);
+    widgets.layer->addChild(widgets.errorMenu);
+
+    auto resetSprite = ButtonSprite::create("Return to First Page", "goldFont.fnt", "GJ_button_01.png", 0.7f);
+    widgets.resetToFirstPageBtn = CCMenuItemSpriteExtra::create(
+        resetSprite,
+        this,
+        menu_selector(SFXIndexPopup::resetToFirstPage)
+    );
+    widgets.resetToFirstPageBtn->setPosition({ widgets.layer->getContentSize().width / 2, widgets.layer->getContentSize().height / 2 - 28.f });
+    widgets.errorMenu->addChild(widgets.resetToFirstPageBtn);
 
     return widgets;
 }
@@ -284,7 +307,7 @@ void SFXIndexPopup::showLoading() {
 
 void SFXIndexPopup::loadingError(const char* text) {
     auto& widgets = activeWidgets();
-    setTabError(widgets, text);
+    setTabError(widgets, text, false);
 }
 
 void SFXIndexPopup::clearList(TabWidgets& widgets) {
@@ -498,6 +521,13 @@ void SFXIndexPopup::refreshPage(CCObject*) {
     auto requestedTab = m_activeTab;
     int requestedPage = pageForTab(requestedTab);
 
+    auto shouldShowResetToFirstPage = [](std::string const& error) {
+        return error.find("404") != std::string::npos ||
+               error.find("overflow") != std::string::npos ||
+               error.find("out of range") != std::string::npos ||
+               error.find("page") != std::string::npos;
+    };
+
     if (m_activeTab == Tab::Downloaded) {
         showDownloadedResults();
         return;
@@ -505,7 +535,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
 
     showLoading();
 
-    auto onSuccess = [this, requestedTab, requestedPage](const matjson::Value& result) {
+    auto onSuccess = [this, requestedTab, requestedPage, shouldShowResetToFirstPage](const matjson::Value& result) {
         if (requestedTab == Tab::OnlineSounds) {
             showOnlineResults(result["data"]);
         } else {
@@ -532,21 +562,24 @@ void SFXIndexPopup::refreshPage(CCObject*) {
             setPageText(fmt::format("Page {} of {}", requestedPage, maxPage));
         } else {
             std::string errorStr = result["error"].asString().unwrap();
-            loadingError(errorStr.c_str());
+            auto& widgets = widgetsForTab(requestedTab);
+            setTabError(widgets, errorStr.c_str(), shouldShowResetToFirstPage(errorStr));
         }
     };
 
-    auto onError = [this, requestedTab](const matjson::Value& result) {
+    auto onError = [this, requestedTab, shouldShowResetToFirstPage](const matjson::Value& result) {
         if (m_activeTab != requestedTab) {
             return;
         }
 
         std::string errorStr = result["error"].asString().unwrap();
         if (requestedTab == Tab::SoundPacks && errorStr.find("404") != std::string::npos) {
-            loadingError("No sound packs yet.");
+            auto& widgets = widgetsForTab(requestedTab);
+            setTabError(widgets, "No sound packs yet.", true);
             return;
         }
-        loadingError(errorStr.c_str());
+        auto& widgets = widgetsForTab(requestedTab);
+        setTabError(widgets, errorStr.c_str(), shouldShowResetToFirstPage(errorStr));
     };
 
     if (requestedTab == Tab::OnlineSounds) {
@@ -598,4 +631,9 @@ void SFXIndexPopup::openSfxFolder(CCObject*) {
     std::error_code ec;
     std::filesystem::create_directories(downloadDir, ec);
     geode::utils::file::openFolder(downloadDir.string());
+}
+
+void SFXIndexPopup::resetToFirstPage(CCObject*) {
+    pageForTab(m_activeTab) = 1;
+    refreshPage(nullptr);
 }
