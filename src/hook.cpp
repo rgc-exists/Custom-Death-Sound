@@ -1,6 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
+#include <chrono>
 #include <random>
 #include "Utils.hpp"
 
@@ -11,6 +12,14 @@ std::map<std::string, FMOD::Sound*> selectedOnlineSounds;
 std::vector<std::string> selectedOnlineSoundPaths;
 
 bool deathSoundEnabled = true;
+std::mt19937 soundRng;
+
+void seedSoundRngFromUnixMs() {
+	auto now = std::chrono::system_clock::now();
+	auto unixMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+	soundRng.seed(static_cast<std::mt19937::result_type>(unixMs));
+	log::info("Seeded sound RNG with unix ms: {}", unixMs);
+}
 
 void reloadSelectedOnlineSounds() {
 	for (auto& [_, sound] : selectedOnlineSounds) {
@@ -55,6 +64,7 @@ void reloadSounds() {
 }
 
 $execute {
+	seedSoundRngFromUnixMs();
 	deathSoundEnabled = Mod::get()->getSettingValue<bool>("death-sound-enabled");
 	reloadSounds();
 
@@ -70,11 +80,10 @@ class $modify(FMODAudioEngine) {
 			refreshSelectedOnlineSoundsIfNeeded();
 
 			if (deathSoundEnabled && !selectedOnlineSounds.empty()) {
-				static std::default_random_engine engine{ std::random_device{}() };
-				std::uniform_int_distribution<size_t> dist(0, selectedOnlineSounds.size() - 1);
+				std::uniform_int_distribution<size_t> soundDist(0, selectedOnlineSounds.size() - 1);
 
 				auto it = selectedOnlineSounds.begin();
-				std::advance(it, dist(engine));
+				std::advance(it, soundDist(soundRng));
 
 				FMOD::Sound* sound = it->second;
 
@@ -82,7 +91,8 @@ class $modify(FMODAudioEngine) {
 				float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
 				float pitch = speed;
 				if (maxPitch > minPitch) {
-					pitch = minPitch + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / (maxPitch - minPitch));
+					std::uniform_real_distribution<float> pitchDist(minPitch, maxPitch);
+					pitch = pitchDist(soundRng);
 				} else {
 					pitch = minPitch;
 				}
