@@ -3,8 +3,6 @@
 #include "../Requests.hpp"
 #include "../Utils.hpp"
 #include <Geode/ui/BasedButton.hpp>
-#include <algorithm>
-#include <filesystem>
 
 using namespace geode::prelude;
 
@@ -396,7 +394,8 @@ void SFXIndexPopup::showDownloadedResults() {
                 metadata.name,
                 "/sounds/" + path.filename().string(),
                 0,
-                0
+                0,
+                true
             );
             widgets.list->m_contentLayer->addChild(cell);
             totalHeight += cell->getContentHeight();

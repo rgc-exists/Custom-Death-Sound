@@ -7,7 +7,7 @@ namespace deathsounds {
         std::unordered_set<std::string> s_downloadedSfx;
     }
 
-    bool SFXCell::init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt/*, int likes, int dislikes*/) {
+    bool SFXCell::init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal/*, int likes, int dislikes*/) {
         if (!CCLayer::init()) {
             return false;
         }
@@ -17,6 +17,7 @@ namespace deathsounds {
         m_name = name;
         m_downloadCount = downloads;
         m_createdAt = createdAt;
+        m_isLocal = isLocal;
         auto existingPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
         bool alreadyDownloaded = std::filesystem::exists(existingPath);
         if (alreadyDownloaded) {
@@ -58,32 +59,32 @@ namespace deathsounds {
         const float actionSpriteScale = 0.8f;
         const float infoSpriteScale = 0.6f;
 
-        auto downloadOffSprite = CCSprite::createWithSpriteFrameName("GJ_downloadBtn_001.png");
-        auto downloadOnSprite = CCSprite::createWithSpriteFrameName("GJ_cancelDownloadBtn_001.png");
+        auto downloadOffSprite = CCSprite::createWithSpriteFrameName("GJ_cancelDownloadBtn_001.png");
+        auto downloadOnSprite = CCSprite::createWithSpriteFrameName("GJ_downloadBtn_001.png");
         downloadOffSprite->setScale(actionSpriteScale);
         downloadOnSprite->setScale(actionSpriteScale);
 
         m_downloadToggle = CCMenuItemExt::createToggler(
-            downloadOnSprite,
             downloadOffSprite,
-            [this](CCMenuItemToggler*) {
-                this->onDownloadToggle(nullptr);
+            downloadOnSprite,
+            [this](CCMenuItemToggler* toggler) {
+                this->onDownloadToggle(toggler);
             }
         );
         m_downloadToggle->toggle(false);
         m_downloadToggle->setPosition({ previewX - actionButtonGap, previewY });
         m_menu->addChild(m_downloadToggle);
 
-        auto useOffSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongBtn_001.png");
-        auto useOnSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongOnBtn_001.png");
+        auto useOffSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongOnBtn_001.png");
+        auto useOnSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongBtn_001.png");
         useOffSprite->setScale(actionSpriteScale);
         useOnSprite->setScale(actionSpriteScale);
 
         m_useToggle = CCMenuItemExt::createToggler(
-            useOnSprite,
             useOffSprite,
-            [this](CCMenuItemToggler*) {
-                this->onUseToggle(nullptr);
+            useOnSprite,
+            [this](CCMenuItemToggler* toggler) {
+                this->onUseToggle(toggler);
             }
         );
         m_useToggle->toggle(false);
@@ -108,33 +109,35 @@ namespace deathsounds {
         nameLabel->setScale(targetScale);
         widget->addChild(nameLabel);
 
-        auto downloadsSprite = CCSprite::createWithSpriteFrameName("GJ_sDownloadIcon_001.png");
-        downloadsSprite->setPosition({ 20.f, 20.f });
-        widget->addChild(downloadsSprite);
+        if (!m_isLocal) {
+            auto downloadsSprite = CCSprite::createWithSpriteFrameName("GJ_sDownloadIcon_001.png");
+            downloadsSprite->setPosition({ 20.f, 20.f });
+            widget->addChild(downloadsSprite);
 
-        auto formatDownloads = [](int downloads) -> std::string {
-            char buf[16];
-            if (downloads >= 1000000000)
-            std::snprintf(buf, sizeof(buf), "%.1fB", downloads / 1000000000.0);
-            else if (downloads >= 1000000)
-            std::snprintf(buf, sizeof(buf), "%.1fM", downloads / 1000000.0);
-            else if (downloads >= 1000)
-            std::snprintf(buf, sizeof(buf), "%.1fK", downloads / 1000.0);
-            else
-            std::snprintf(buf, sizeof(buf), "%d", downloads);
-            std::string s(buf);
-            if (s.find('.') != std::string::npos) {
-            s.erase(s.find_last_not_of('0') + 1, std::string::npos);
-            if (s.back() == '.') s.pop_back();
-            }
-            return s;
-        };
+            auto formatDownloads = [](int downloads) -> std::string {
+                char buf[16];
+                if (downloads >= 1000000000)
+                std::snprintf(buf, sizeof(buf), "%.1fB", downloads / 1000000000.0);
+                else if (downloads >= 1000000)
+                std::snprintf(buf, sizeof(buf), "%.1fM", downloads / 1000000.0);
+                else if (downloads >= 1000)
+                std::snprintf(buf, sizeof(buf), "%.1fK", downloads / 1000.0);
+                else
+                std::snprintf(buf, sizeof(buf), "%d", downloads);
+                std::string s(buf);
+                if (s.find('.') != std::string::npos) {
+                s.erase(s.find_last_not_of('0') + 1, std::string::npos);
+                if (s.back() == '.') s.pop_back();
+                }
+                return s;
+            };
 
-        auto downloadsText = CCLabelBMFont::create(formatDownloads(downloads).c_str(), "bigFont.fnt");
-        downloadsText->setAnchorPoint({ 0.f, 0.5f });
-        downloadsText->setScale(0.4f);
-        downloadsText->setPosition({ 30.f, 20.f });
-        widget->addChild(downloadsText);
+            auto downloadsText = CCLabelBMFont::create(formatDownloads(downloads).c_str(), "bigFont.fnt");
+            downloadsText->setAnchorPoint({ 0.f, 0.5f });
+            downloadsText->setScale(0.4f);
+            downloadsText->setPosition({ 30.f, 20.f });
+            widget->addChild(downloadsText);
+        }
 
         /*CCSprite* likesSprite;
         if ((likes - dislikes) >= 0) {
@@ -167,9 +170,9 @@ namespace deathsounds {
         return true;
     }
 
-    SFXCell* SFXCell::create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt/*, int likes, int dislikes*/) {
+    SFXCell* SFXCell::create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal/*, int likes, int dislikes*/) {
         auto ret = new SFXCell();
-        if (ret && ret->init(index, id, name, url, downloads, createdAt/*, likes, dislikes*/)) {
+        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal/*, likes, dislikes*/)) {
             ret->autorelease();
             return ret;
         }
@@ -186,7 +189,6 @@ namespace deathsounds {
     void SFXCell::startDownload() {
         m_downloadTask.cancel();
         m_downloadState = DownloadState::Downloading;
-        refreshActionButtons();
 
         auto outPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
         auto url = utils::makeSfxDownloadUrl(m_sfxUrl);
@@ -251,7 +253,6 @@ namespace deathsounds {
         m_inUse = false;
         utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), false);
         s_downloadedSfx.erase(m_sfxId);
-        refreshActionButtons();
     }
 
     void SFXCell::finishDownload() {
@@ -266,22 +267,34 @@ namespace deathsounds {
         refreshActionButtons();
     }
 
-    void SFXCell::onDownloadToggle(CCObject*) {
-        if (m_downloadState == DownloadState::Downloading) {
-            cancelDownload();
+    void SFXCell::onDownloadToggle(CCObject* sender) {
+        if (m_downloadState == DownloadState::Downloaded) {
             return;
         }
-        if (m_downloadState == DownloadState::NotDownloaded) {
+
+        auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
+
+        bool wantsDownloading = toggler
+            ? !toggler->isOn()
+            : (m_downloadState == DownloadState::NotDownloaded);
+
+        if (wantsDownloading && m_downloadState == DownloadState::NotDownloaded) {
             startDownload();
+            return;
+        }
+
+        if (!wantsDownloading && m_downloadState == DownloadState::Downloading) {
+            cancelDownload();
         }
     }
 
-    void SFXCell::onUseToggle(CCObject*) {
+    void SFXCell::onUseToggle(CCObject* sender) {
         if (m_downloadState != DownloadState::Downloaded) {
             return;
         }
 
-        m_inUse = !m_inUse;
+        auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
+        m_inUse = toggler ? !toggler->isOn() : !m_inUse;
         utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), m_inUse);
 
         auto selectedPaths = utils::getUsedOnlineSfxPaths();
@@ -290,15 +303,15 @@ namespace deathsounds {
             m_name,
             m_sfxId,
             selectedPaths.size());
-
-        refreshActionButtons();
     }
 
     void SFXCell::onInfoPressed(CCObject*) {
+        auto uploadedText = m_isLocal ? std::string("Unknown") : deathsounds::utils::formatDate(m_createdAt);
+        auto downloadsText = m_isLocal ? std::string("Unknown") : fmt::to_string(m_downloadCount);
         geode::createQuickPopup(
             m_name.c_str(),
             fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}",
-                m_name, deathsounds::utils::formatDate(m_createdAt), m_downloadCount),
+                m_name, uploadedText, downloadsText),
             "Delete", "OK",
             [this](FLAlertLayer*, bool btn2) {
                 if (btn2) {
@@ -324,11 +337,7 @@ namespace deathsounds {
     }
 
     void SFXCell::refreshActionButtons() {
-        if (!m_downloadToggle || !m_useToggle) {
-            return;
-        }
-
-        if (!m_menu) {
+        if (!m_downloadToggle || !m_useToggle || !m_menu) {
             return;
         }
 
@@ -336,23 +345,22 @@ namespace deathsounds {
         const float previewY = m_menu->getContentHeight() / 2;
         const float actionButtonGap = 38.f;
 
-        bool isDownloaded = m_downloadState == DownloadState::Downloaded;
-        bool isDownloading = m_downloadState == DownloadState::Downloading;
+        bool isDownloaded = (m_downloadState == DownloadState::Downloaded);
+        bool isDownloading = (m_downloadState == DownloadState::Downloading);
 
         m_downloadToggle->setVisible(!isDownloaded);
-        m_downloadToggle->setEnabled(!isDownloaded);
         m_downloadToggle->toggle(isDownloading);
+        
         m_downloadToggle->setPosition({ previewX, previewY });
 
         m_useToggle->setVisible(isDownloaded);
-        m_useToggle->setEnabled(isDownloaded);
         m_useToggle->toggle(m_inUse);
-        m_useToggle->setPosition({ previewX - actionButtonGap, previewY });
+        m_useToggle->setPosition({ isDownloaded ? previewX - actionButtonGap : previewX, previewY });
 
         if (isDownloaded) {
             ensurePreviewButton();
-        }
-        else {
+            if (m_previewToggle) m_previewToggle->setPosition({ previewX, previewY });
+        } else {
             removePreviewButton();
         }
     }
@@ -364,29 +372,30 @@ namespace deathsounds {
 
         m_previewToggle = CCMenuItemExt::createToggler(
             [] {
-                auto spr = CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png");
+                auto spr = CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png");
                 spr->setScale(0.8f);
                 return spr;
             }(),
             [] {
-                auto spr = CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png");
+                auto spr = CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png");
                 spr->setScale(0.8f);
                 return spr;
             }(),
             [this](CCMenuItemToggler* toggler) {
                 if (this->m_previewState.playing) {
                     this->stopPreview();
-                    toggler->toggle(false);
                     return;
                 }
 
-                toggler->toggle(this->startPreview());
+                if (!this->startPreview()) {
+                    toggler->toggle(true);
+                }
             }
         );
 
         m_previewToggle->setPosition({ m_menu->getContentWidth() - 30.f, m_menu->getContentHeight() / 2 });
         m_menu->addChild(m_previewToggle);
-        m_previewToggle->toggle(false);
+        m_previewToggle->toggle(true);
     }
 
     void SFXCell::checkPreviewFinished(float) {
@@ -399,7 +408,7 @@ namespace deathsounds {
         if (result != FMOD_OK || !isPlaying) {
             stopPreview();
             if (m_previewToggle) {
-                m_previewToggle->toggle(false);
+                m_previewToggle->toggle(true);
             }
         }
     }

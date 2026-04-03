@@ -9,8 +9,8 @@ using namespace geode::prelude;
 namespace deathsounds {
     class SFXCell : public CCLayer {
     public:
-        bool init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt/*, int likes, int dislikes*/);
-        static SFXCell* create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt/*, int likes, int dislikes*/);
+        bool init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false/*, int likes, int dislikes*/);
+        static SFXCell* create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false/*, int likes, int dislikes*/);
         void onExit() override;
 
         void onDownloadToggle(CCObject* sender);
@@ -39,6 +39,7 @@ namespace deathsounds {
         std::string m_name;
         int m_downloadCount = 0;
         int32_t m_createdAt = 0;
+        bool m_isLocal = false;
         bool m_previewPlaying = false;
         bool m_inUse = false;
         DownloadState m_downloadState = DownloadState::NotDownloaded;

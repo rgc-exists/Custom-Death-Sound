@@ -1,5 +1,5 @@
 {
-	"geode": "5.4.1",
+	"geode": "5.5.3",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
@@ -7,10 +7,10 @@
 		"ios": "2.2081"
 	},
 	"id": "rgc_exists.custom-death-sound-v2",
-	"name": "Custom Death Sound",
+	"name": "Custom Death Sound Reimagined",
 	"version": "v1.0.0",
 	"developers": ["OmgRod", "RGC Exists"],
-	"description": "A mod for changing the death sound effect, but with extra randomization features. Pick from a folder of random sounds and randomize the pitch.",
+	"description": "A mod for changing the death sound effect, but with extra randomization features.",
 	"tags": [ "offline", "online", "customization", "content", "gameplay" ],
 	"resources": {
 		"sprites": [
@@ -34,27 +34,6 @@
 			"description": "Server URL for Death SFX index",
 			"filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:/.-"
 		},
-		"mute-death-sound": {
-			"type": "bool",
-			"name": "Mute Death Sound",
-			"default": false,
-			"enable-if": "!death-sound-enabled",
-			"enable-if-description": "Disable the setting 'Enable Custom Death Sound(s)'"
-		},
-		"sound-path": {
-			"type": "file",
-			"name": "Death Sound File",
-			"default": "{gd_dir}/resources/explode_11.ogg",
-			"control": {
-				"dialog": "open",
-				"filters": [{
-					"files": ["*.ogg", "*.wav", "*.mp3", "*.flac"],
-					"description": "Audio files"
-				}]
-			},
-			"enable-if": "!extra-sounds-enabled && !mute-death-sound",
-			"enable-if-description": "Disable the setting 'Multiple Sounds Enabled' and enable the setting 'Enable Custom Death Sound(s)'"
-		},
 		"volume": {
 			"name": "Volume",
 			"type": "float",
@@ -65,31 +44,7 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			},
-			"enable-if": "!mute-death-sound"
-		},
-		"clear-on-reset": {
-			"type": "bool",
-			"name": "Stop Sound On Reset",
-			"default": true,
-			"enable-if": "!mute-death-sound"
-		},
-		"extra-sounds-title": {
-			"type": "title",
-			"name": "Multiple Sounds (Random Pick, Formerly known as \"extra death sounds\")",
-			"description": "Import a folder with MULTIPLE sounds and have them chosen from randomly. THIS WILL OVERRIDE YOUR MAIN SOUND!"
-		},
-		"extra-sounds-enabled": {
-			"type": "bool",
-			"name": "Multiple Sounds Enabled",
-			"default": false,
-			"enable-if": "!mute-death-sound"
-		},
-		"extra-sounds-path": {
-			"type": "folder",
-			"name": "Multiple Death Sounds Directory",
-			"default": "{mod_config_dir}/extraDeathSounds",
-			"enable-if": "extra-sounds-enabled && !mute-death-sound"
+			}
 		},
 		"pitch-randomization-title": {
 			"type": "title",
@@ -106,8 +61,7 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			},
-			"enable-if": "!mute-death-sound"
+			}
 		},
 		"pitch-maximum": {
 			"name": "Pitch Maximum",
@@ -119,51 +73,7 @@
 				"slider-step": 0.05,
 				"slider": true,
 				"input": true
-			},
-			"enable-if": "!mute-death-sound"
-		},
-		"other-sounds-title": {
-			"type": "title",
-			"name": "Other Sounds"
-		},
-		"level-complete-enabled": {
-			"type": "bool",
-			"name": "Enable Custom Level Complete Sound",
-			"default": false,
-			"enable-if": "!mute-level-complete"
-		},
-		"mute-level-complete": {
-			"type": "bool",
-			"name": "Mute Level Complete Sound",
-			"default": false,
-			"enable-if": "!level-complete-enabled",
-			"enable-if-description": "Disable the setting 'Enable Custom Level Complete Sound'"
-		},
-		"level-complete-path": {
-			"type": "file",
-			"name": "Level Complete Sound File",
-			"default": "{gd_dir}/resources/endStart_02.ogg",
-			"enable-if": "level-complete-enabled",
-			"control": {
-				"dialog": "open",
-				"filters": [{
-					"files": ["*.ogg", "*.wav", "*.mp3", "*.flac"],
-					"description": "Audio files"
-				}]
 			}
-		},
-		"level-complete-volume": {
-			"name": "Level Complete Volume",
-			"type": "float",
-			"default": 1,
-			"min": 0.0,
-			"max": 3.0,
-			"control": {
-				"slider-step": 0.05,
-				"slider": true,
-				"input": true
-			},
-			"enable-if": "level-complete-enabled"
 		}
 	},
 	"dependencies": {
