@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Border.hpp"
+#include "CCLayerMultiplexR.hpp"
+#include "geode/GeodeTabSprite.hpp"
 #include <Geode/Geode.hpp>
 #include <functional>
 
@@ -23,7 +25,7 @@ private:
         CCClippingNode* clipping = nullptr;
     };
 
-    CCLayerMultiplex* m_tabHost = nullptr;
+    CCLayerMultiplexR* m_tabHost = nullptr;
     TabWidgets m_downloadedWidgets;
     TabWidgets m_onlineWidgets;
     TabWidgets m_packWidgets;
@@ -34,9 +36,12 @@ private:
     CCLabelBMFont* m_pageLabel;
     CCMenuItemSpriteExtra* m_nextPageBtn;
     CCMenuItemSpriteExtra* m_prevPageBtn;
-    geode::TabButton* m_downloadedTabBtn;
-    geode::TabButton* m_onlineTabBtn;
-    geode::TabButton* m_packsTabBtn;
+    CCMenuItemSpriteExtra* m_downloadedTabBtn;
+    CCMenuItemSpriteExtra* m_onlineTabBtn;
+    CCMenuItemSpriteExtra* m_packsTabBtn;
+    GeodeTabSprite* m_downloadedTabSprite = nullptr;
+    GeodeTabSprite* m_onlineTabSprite = nullptr;
+    GeodeTabSprite* m_packsTabSprite = nullptr;
     Tab m_activeTab = Tab::OnlineSounds;
 
     TabWidgets& widgetsForTab(Tab tab);

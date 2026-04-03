@@ -26,8 +26,8 @@ SFXIndexPopup::TabWidgets& SFXIndexPopup::activeWidgets() {
 
 void SFXIndexPopup::setTabLoading(TabWidgets& widgets) {
     widgets.loading->setVisible(true);
-    widgets.border->setVisible(false);
-    widgets.clipping->setVisible(false);
+    widgets.clipping->setVisible(true);
+    widgets.border->setVisible(true);
     widgets.error->setVisible(false);
     if (m_pageLabel) {
         m_pageLabel->setVisible(true);
@@ -136,6 +136,7 @@ SFXIndexPopup::TabWidgets SFXIndexPopup::createTabWidgets() {
     widgets.border->setVisible(false);
     widgets.clipping->addChild(widgets.border);
     widgets.layer->addChild(widgets.clipping);
+    widgets.loading->setZOrder(10);
 
     widgets.error = CCLabelBMFont::create("", "bigFont.fnt", 350.f);
     widgets.error->setPosition(widgets.layer->getContentSize() / 2);
@@ -152,36 +153,34 @@ bool SFXIndexPopup::init(bool settingsEnabled) {
     if (!Popup::init(440.f, 290.f, "GJ_square02.png")) return false;
 
     this->setTitle("Death SFX Index");
+    this->m_title->setPositionY(275.f);
 
     auto menu = CCMenu::create();
     menu->setPosition({ 0.f, 0.f });
     menu->setAnchorPoint({ 0.f, 0.f });
     m_mainLayer->addChild(menu);
 
-    m_downloadedTabBtn = geode::TabButton::create(
-        geode::TabBaseColor::Unselected,
-        geode::TabBaseColor::Selected,
-        "Downloaded",
+    m_downloadedTabSprite = GeodeTabSprite::create("GJ_sDownloadIcon_001.png", "Downloaded", 96.f);
+    m_downloadedTabBtn = CCMenuItemSpriteExtra::create(
+        m_downloadedTabSprite,
         this,
         menu_selector(SFXIndexPopup::selectDownloadedTab)
     );
     m_downloadedTabBtn->setPosition({ 95.f, kTabButtonY });
     menu->addChild(m_downloadedTabBtn);
 
-    m_onlineTabBtn = geode::TabButton::create(
-        geode::TabBaseColor::Unselected,
-        geode::TabBaseColor::Selected,
-        "Online Sounds",
+    m_onlineTabSprite = GeodeTabSprite::create("geode.loader/globe.png", "Online Sounds", 106.f, true);
+    m_onlineTabBtn = CCMenuItemSpriteExtra::create(
+        m_onlineTabSprite,
         this,
         menu_selector(SFXIndexPopup::selectOnlineTab)
     );
     m_onlineTabBtn->setPosition({ 220.f, kTabButtonY });
     menu->addChild(m_onlineTabBtn);
 
-    m_packsTabBtn = geode::TabButton::create(
-        geode::TabBaseColor::Unselected,
-        geode::TabBaseColor::Selected,
-        "Sound Packs",
+    m_packsTabSprite = GeodeTabSprite::create("folderIcon_001.png", "Sound Packs", 96.f);
+    m_packsTabBtn = CCMenuItemSpriteExtra::create(
+        m_packsTabSprite,
         this,
         menu_selector(SFXIndexPopup::selectPacksTab)
     );
@@ -192,14 +191,13 @@ bool SFXIndexPopup::init(bool settingsEnabled) {
     m_onlineWidgets = createTabWidgets();
     m_packWidgets = createTabWidgets();
 
-    m_tabHost = CCLayerMultiplex::create(
+    m_tabHost = CCLayerMultiplexR::create({
         m_downloadedWidgets.layer,
         m_onlineWidgets.layer,
         m_packWidgets.layer,
-        nullptr
-    );
+    });
     m_tabHost->setContentSize(m_mainLayer->getContentSize());
-    m_tabHost->setPosition({ 0.f, 0.f });
+    m_tabHost->setPosition({ 0.f, -12.5f });
     m_mainLayer->addChild(m_tabHost);
     
     auto refreshSprite = CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png");
@@ -459,14 +457,17 @@ void SFXIndexPopup::showDownloadedResults() {
 }
 
 void SFXIndexPopup::updateTabVisuals() {
-    if (m_downloadedTabBtn) {
-        m_downloadedTabBtn->toggle(m_activeTab == Tab::Downloaded);
+    if (m_downloadedTabSprite) {
+        m_downloadedTabSprite->select(m_activeTab == Tab::Downloaded);
+        m_downloadedTabSprite->disable(m_activeTab != Tab::Downloaded);
     }
-    if (m_onlineTabBtn) {
-        m_onlineTabBtn->toggle(m_activeTab == Tab::OnlineSounds);
+    if (m_onlineTabSprite) {
+        m_onlineTabSprite->select(m_activeTab == Tab::OnlineSounds);
+        m_onlineTabSprite->disable(m_activeTab != Tab::OnlineSounds);
     }
-    if (m_packsTabBtn) {
-        m_packsTabBtn->toggle(m_activeTab == Tab::SoundPacks);
+    if (m_packsTabSprite) {
+        m_packsTabSprite->select(m_activeTab == Tab::SoundPacks);
+        m_packsTabSprite->disable(m_activeTab != Tab::SoundPacks);
     }
 }
 
