@@ -62,7 +62,7 @@ void reloadExtraSounds() {
 			}
 		}
 		else {
-			log::error("Error recursively going through directory: {} ERROR CODE: {}", path, ;);
+			log::error("Error recursively going through directory: {} ERROR CODE: {}", path, code);
 		}
 	}
 	else {
