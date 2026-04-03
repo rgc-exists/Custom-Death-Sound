@@ -32,6 +32,6 @@ public:
     }
 
     void onSFXLibrary(CCObject* sender) {
-        SFXIndexPopup::create()->show();
+        SFXIndexPopup::create(true)->show();
     }
 };

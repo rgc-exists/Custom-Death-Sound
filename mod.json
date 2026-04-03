@@ -8,7 +8,7 @@
 	},
 	"id": "rgc_exists.custom-death-sound-v2",
 	"name": "Custom Death Sound Reimagined",
-	"version": "v1.0.0",
+	"version": "v2.0.0",
 	"developers": ["OmgRod", "RGC Exists"],
 	"description": "A mod for changing the death sound effect, but with extra randomization features.",
 	"tags": [ "offline", "online", "customization", "content", "gameplay" ],
@@ -21,6 +21,10 @@
 		"source": "https://github.com/rgc-exists/Custom-Death-Sound"
 	},
 	"settings": {
+		"online-library-button": {
+			"type": "custom:button",
+			"name": "Online Library"
+		},
 		"death-sound-enabled": {
 			"type": "bool",
 			"name": "Enable Custom Death Sound(s)",

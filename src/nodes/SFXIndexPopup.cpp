@@ -1,4 +1,5 @@
 #include "SFXIndexPopup.hpp"
+#include "Geode/ui/GeodeUI.hpp"
 #include "SFXCell.hpp"
 #include "../Requests.hpp"
 #include "../Utils.hpp"
@@ -145,7 +146,7 @@ SFXIndexPopup::TabWidgets SFXIndexPopup::createTabWidgets() {
     return widgets;
 }
 
-bool SFXIndexPopup::init() {
+bool SFXIndexPopup::init(bool settingsEnabled) {
         constexpr float kTabButtonY = 248.f;
 
     if (!Popup::init(440.f, 290.f, "GJ_square02.png")) return false;
@@ -211,6 +212,38 @@ bool SFXIndexPopup::init() {
     );
     refreshButton->setPosition({ m_mainLayer->getContentWidth() - (refreshButton->getContentWidth() * 0.75f), (refreshButton->getContentHeight() * 0.75f ) });
     menu->addChild(refreshButton);
+
+    if (settingsEnabled) {
+        auto settingsSprite = CircleButtonSprite::create(
+            CCSprite::createWithSpriteFrameName("geode.loader/settings.png"),
+            CircleBaseColor::Green,
+            CircleBaseSize::Medium
+        );
+        settingsSprite->setScale(0.75f);
+
+        auto settingsButton = CCMenuItemSpriteExtra::create(
+            settingsSprite,
+            this,
+            menu_selector(SFXIndexPopup::openModSettings)
+        );
+        settingsButton->setPosition({ m_mainLayer->getContentWidth() - ((settingsButton->getContentWidth() * 0.75f)), ((settingsButton->getContentHeight() * 0.75f) + settingsButton->getContentHeight() + 10.f) });
+        menu->addChild(settingsButton);
+    }
+
+    auto folderSprite = CircleButtonSprite::create(
+        CCSprite::createWithSpriteFrameName("folderIcon_001.png"),
+        CircleBaseColor::Green,
+        CircleBaseSize::Medium
+    );
+    folderSprite->setScale(0.75f);
+
+    auto folderButton = CCMenuItemSpriteExtra::create(
+        folderSprite,
+        this,
+        menu_selector(SFXIndexPopup::openSfxFolder)
+    );
+    folderButton->setPosition({ folderButton->getContentWidth() * 0.75f, ((folderButton->getContentHeight() * 0.75f)) });
+    menu->addChild(folderButton);
     
     auto nextPageSprite = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
     nextPageSprite->setFlipX(true);
@@ -388,6 +421,13 @@ void SFXIndexPopup::showDownloadedResults() {
         for (int i = startIdx; i < endIdx; ++i) {
             auto const& path = downloadedFiles[i];
             auto metadata = deathsounds::utils::getDownloadedSfxMetadata(path);
+            auto metadataPath = deathsounds::utils::getSfxMetadataPath(path);
+            if (!std::filesystem::exists(metadataPath)) {
+                auto fallbackName = path.filename().string();
+                metadata.id = fallbackName;
+                metadata.name = fallbackName;
+                metadata.path = std::filesystem::absolute(path).string();
+            }
             auto cell = deathsounds::SFXCell::create(
                 index,
                 metadata.id,
@@ -537,13 +577,24 @@ void SFXIndexPopup::prevPage(CCObject* sender) {
     refreshPage(sender);
 }
 
-SFXIndexPopup* SFXIndexPopup::create() {
+SFXIndexPopup* SFXIndexPopup::create(bool settingsEnabled) {
     auto ret = new SFXIndexPopup();
-    if (ret->init()) {
+    if (ret->init(settingsEnabled)) {
         ret->autorelease();
         return ret;
     }
 
     delete ret;
     return nullptr;
+}
+
+void SFXIndexPopup::openModSettings(CCObject* sender) {
+    openSettingsPopup(Mod::get());
+}
+
+void SFXIndexPopup::openSfxFolder(CCObject*) {
+    auto downloadDir = Mod::get()->getConfigDir() / "downloaded-sfx";
+    std::error_code ec;
+    std::filesystem::create_directories(downloadDir, ec);
+    geode::utils::file::openFolder(downloadDir.string());
 }

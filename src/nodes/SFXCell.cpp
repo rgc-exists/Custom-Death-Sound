@@ -98,10 +98,8 @@ namespace deathsounds {
         nameLabel->setAnchorPoint({ 0.f, 1.f });
         nameLabel->setPosition({ 10.f, widget->getContentHeight() - 10.f });
         float nameBaseScale = 0.5f;
-        float actionVisualHalfWidth = m_downloadToggle->getContentWidth() * actionSpriteScale * 0.5f;
-        float previewLeftEdge = previewX - actionVisualHalfWidth;
-        float actionLeftEdge = m_downloadToggle->getPositionX() - actionVisualHalfWidth;
-        float maxNameWidth = std::min(previewLeftEdge, actionLeftEdge) - nameLabel->getPositionX() - 8.f;
+        float actionButtonWidth = m_downloadToggle->getContentWidth() * actionSpriteScale;
+        float maxNameWidth = (previewX - (actionButtonWidth * 2.f + actionButtonGap)) - nameLabel->getPositionX() - 8.f;
         float targetScale = nameBaseScale;
         if (maxNameWidth > 0.f && (nameLabel->getContentWidth() * nameBaseScale) > maxNameWidth) {
             targetScale = maxNameWidth / nameLabel->getContentWidth();

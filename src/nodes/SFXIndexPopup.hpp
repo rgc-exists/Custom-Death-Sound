@@ -51,7 +51,7 @@ private:
     void populateTabRows(TabWidgets& widgets, std::function<void(int&, float&)> const& appendRow);
 
 protected:
-    bool init();
+    bool init(bool settingsEnabled);
 
     void showLoading();
     void loadingError(const char* text);
@@ -68,7 +68,9 @@ protected:
     void refreshPage(CCObject*);
     void nextPage(CCObject*);
     void prevPage(CCObject*);
+    void openModSettings(CCObject*);
+    void openSfxFolder(CCObject*);
 
 public:
-    static SFXIndexPopup* create();
+    static SFXIndexPopup* create(bool settingsEnabled);
 };
