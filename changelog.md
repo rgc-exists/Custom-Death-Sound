@@ -2,8 +2,11 @@
 
 ## v2.0.0
 
+Credits to OmgRod for this MASSIVE update!
+
 - Completely remade the mod
 - Added online sound effect library
+- Added sound packs
 
 ---
 
