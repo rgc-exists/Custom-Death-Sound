@@ -47,11 +47,11 @@ void reloadExtraSounds() {
 			log::error("Error checking if path {} exists: {}", path, error.message());
 		}
 		std::vector<std::string> exts = { ".ogg", ".wav", ".mp3", ".flac" };
-		std::error_code error;
 
-		try {
-			for (auto& p : std::filesystem::recursive_directory_iterator(path, std::filesystem::directory_options::skip_permission_denied))
-			{
+		std::error_code code;
+		std::filesystem::directory_iterator it(path, code); // Thanks to hiimjasmine for a proper error handling version of this code.
+		if (!code) {
+			for (; it != std::filesystem::end(it); it.increment(code)) {
 				if (std::find(exts.begin(), exts.end(), p.path().extension()) != exts.end()) {
 					FMOD::Sound* sound;
 					std::string pathStr = p.path().string();
@@ -61,9 +61,8 @@ void reloadExtraSounds() {
 				}
 			}
 		}
-		catch (int errorCode) {
-			log::error("Error recursively going through directory: {} ERROR CODE: {}", path, errorCode);
-
+		else {
+			log::error("Error recursively going through directory: {} ERROR CODE: {}", path, ;);
 		}
 	}
 	else {
