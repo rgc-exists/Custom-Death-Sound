@@ -10,7 +10,7 @@ Credits to OmgRod for this MASSIVE update!
 
 ---
 
-# All changes beyond this point are for the **old** version of the mod, available [here](mod:rgc_exists.death_sfx_changer)
+# All changes beyond this point are for the **old** version of the mod, which should be available [here](mod:rgc_exists.death_sfx_changer_lite) as a Lite version once it's accepted by the index mods.
 
 ## v1.0.5
 

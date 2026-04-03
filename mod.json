@@ -6,10 +6,10 @@
 		"mac": "2.2081",
 		"ios": "2.2081"
 	},
-	"id": "rgc_exists.custom-death-sound-v2",
+	"id": "rgc_exists.death_sfx_changer",
 	"name": "Custom Death Sound Reimagined",
 	"version": "v2.0.0-prerelease",
-	"developers": ["OmgRod", "RGC Exists"],
+	"developers": [ "OmgRod", "RGC Exists" ],
 	"description": "A mod for changing the death sound effect, but with extra randomization features.",
 	"tags": [ "offline", "online", "customization", "content", "gameplay" ],
 	"resources": {
