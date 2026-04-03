@@ -71,7 +71,7 @@ namespace deathsounds {
     }
 
     std::string SFXPackCell::makeSoundRelativeUrl(gd::string const& soundId) {
-        return "/sounds/" + soundId + ".wav";
+        return std::string("/sounds/") + std::string(soundId) + ".wav";
     }
 
     std::string SFXPackCell::formatCountCompact(int value) {
