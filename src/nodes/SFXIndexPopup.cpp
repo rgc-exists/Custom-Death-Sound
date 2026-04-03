@@ -1,6 +1,7 @@
 #include "SFXIndexPopup.hpp"
 #include "Geode/ui/GeodeUI.hpp"
 #include "SFXCell.hpp"
+#include "SFXPackCell.hpp"
 #include "../Requests.hpp"
 #include "../Utils.hpp"
 #include <Geode/ui/BasedButton.hpp>
@@ -355,6 +356,7 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
                 sfxItem["downloads"].asInt().unwrap(),
                 static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap())
             );
+            cell->validateDownloadState();
             widgets.list->m_contentLayer->addChild(cell);
             totalHeight += cell->getContentHeight();
             widgets.list->m_contentLayer->setContentSize({ widgets.list->m_contentLayer->getContentSize().width, totalHeight });
@@ -374,8 +376,10 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
         return;
     }
 
+    auto const& packs = result.contains("data") ? result["data"] : result;
+
     populateTabRows(widgets, [&](int& index, float& totalHeight) {
-        for (auto& packItem : result) {
+        for (auto& packItem : packs) {
             std::string id = "unknown-id";
             if (packItem.contains("id")) {
                 id = packItem["id"].asString().unwrap();
@@ -386,8 +390,31 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                 name = packItem["name"].asString().unwrap();
             }
 
-            addSimpleRow(widgets, index, name, fmt::format("Pack ID: {}", id));
-            totalHeight += 80.f;
+            int trackCount = 0;
+            std::vector<gd::string> soundIds;
+            if (packItem.contains("ids")) {
+                for (auto const& idValue : packItem["ids"]) {
+                    if (idValue.isString()) {
+                        soundIds.push_back(idValue.asString().unwrapOr(""));
+                    }
+                    ++trackCount;
+                }
+            }
+
+            int downloads = 0;
+            if (packItem.contains("downloads")) {
+                downloads = packItem["downloads"].asInt().unwrapOr(0);
+            }
+
+            int32_t createdAt = 0;
+            if (packItem.contains("createdAt")) {
+                createdAt = static_cast<int32_t>(packItem["createdAt"].asInt().unwrapOr(0));
+            }
+
+            auto cell = deathsounds::SFXPackCell::create(index, id, name, soundIds, downloads, createdAt);
+            cell->validateDownloadState();
+            widgets.list->m_contentLayer->addChild(cell);
+            totalHeight += cell->getContentHeight();
             widgets.list->m_contentLayer->setContentSize({ widgets.list->m_contentLayer->getContentSize().width, totalHeight });
             ++index;
         }
@@ -458,6 +485,7 @@ void SFXIndexPopup::showDownloadedResults() {
                 0,
                 true
             );
+            cell->validateDownloadState();
             widgets.list->m_contentLayer->addChild(cell);
             totalHeight += cell->getContentHeight();
             widgets.list->m_contentLayer->setContentSize({ widgets.list->m_contentLayer->getContentSize().width, totalHeight });

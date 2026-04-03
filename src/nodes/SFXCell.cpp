@@ -7,7 +7,7 @@ namespace deathsounds {
         std::unordered_set<std::string> s_downloadedSfx;
     }
 
-    bool SFXCell::init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal/*, int likes, int dislikes*/) {
+    bool SFXCell::init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal, bool allowPreview/*, int likes, int dislikes*/) {
         if (!CCLayer::init()) {
             return false;
         }
@@ -18,6 +18,7 @@ namespace deathsounds {
         m_downloadCount = downloads;
         m_createdAt = createdAt;
         m_isLocal = isLocal;
+        m_allowPreview = allowPreview;
         auto existingPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
         bool alreadyDownloaded = std::filesystem::exists(existingPath);
         if (alreadyDownloaded) {
@@ -75,8 +76,8 @@ namespace deathsounds {
         m_downloadToggle->setPosition({ previewX - actionButtonGap, previewY });
         m_menu->addChild(m_downloadToggle);
 
-        auto useOffSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongOnBtn_001.png");
-        auto useOnSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongBtn_001.png");
+        auto useOffSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongBtn_001.png");
+        auto useOnSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongOnBtn_001.png");
         useOffSprite->setScale(actionSpriteScale);
         useOnSprite->setScale(actionSpriteScale);
 
@@ -163,14 +164,16 @@ namespace deathsounds {
         infoButton->setPosition(m_menu->getContentSize() - 10.f);
         m_menu->addChild(infoButton);
 
-        this->schedule(schedule_selector(SFXCell::checkPreviewFinished), 0.1f);
+        if (m_allowPreview) {
+            this->schedule(schedule_selector(SFXCell::checkPreviewFinished), 0.1f);
+        }
 
         return true;
     }
 
-    SFXCell* SFXCell::create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal/*, int likes, int dislikes*/) {
+    SFXCell* SFXCell::create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal, bool allowPreview/*, int likes, int dislikes*/) {
         auto ret = new SFXCell();
-        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal/*, likes, dislikes*/)) {
+        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview/*, likes, dislikes*/)) {
             ret->autorelease();
             return ret;
         }
@@ -182,6 +185,18 @@ namespace deathsounds {
         this->unschedule(schedule_selector(SFXCell::checkPreviewFinished));
         stopPreview();
         CCLayer::onExit();
+    }
+
+    void SFXCell::validateDownloadState() {
+        auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+        bool fileExists = std::filesystem::exists(downloadPath);
+
+        if (!fileExists && m_downloadState == DownloadState::Downloaded) {
+            m_downloadState = DownloadState::NotDownloaded;
+            m_inUse = false;
+            utils::setOnlineSfxPathUsed(downloadPath, false);
+            refreshActionButtons();
+        }
     }
 
     void SFXCell::startDownload() {
@@ -292,7 +307,7 @@ namespace deathsounds {
         }
 
         auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
-        m_inUse = toggler ? !toggler->isOn() : !m_inUse;
+        m_inUse = toggler ? toggler->isOn() : !m_inUse;
         utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), m_inUse);
 
         auto selectedPaths = utils::getUsedOnlineSfxPaths();
@@ -352,10 +367,11 @@ namespace deathsounds {
         m_downloadToggle->setPosition({ previewX, previewY });
 
         m_useToggle->setVisible(isDownloaded);
-        m_useToggle->toggle(m_inUse);
-        m_useToggle->setPosition({ isDownloaded ? previewX - actionButtonGap : previewX, previewY });
+        m_useToggle->toggle(!m_inUse);
+        const bool reservePreviewSlot = isDownloaded && m_allowPreview;
+        m_useToggle->setPosition({ reservePreviewSlot ? previewX - actionButtonGap : previewX, previewY });
 
-        if (isDownloaded) {
+        if (isDownloaded && m_allowPreview) {
             ensurePreviewButton();
             if (m_previewToggle) m_previewToggle->setPosition({ previewX, previewY });
         } else {

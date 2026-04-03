@@ -9,24 +9,25 @@ using namespace geode::prelude;
 namespace deathsounds {
     class SFXCell : public CCLayer {
     public:
-        bool init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false/*, int likes, int dislikes*/);
-        static SFXCell* create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false/*, int likes, int dislikes*/);
+        bool init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false, bool allowPreview = true/*, int likes, int dislikes*/);
+        static SFXCell* create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false, bool allowPreview = true/*, int likes, int dislikes*/);
         void onExit() override;
+        virtual void validateDownloadState();
 
-        void onDownloadToggle(CCObject* sender);
-        void onUseToggle(CCObject* sender);
-        void onInfoPressed(CCObject* sender);
-        void finishDownload();
+        virtual void onDownloadToggle(CCObject* sender);
+        virtual void onUseToggle(CCObject* sender);
+        virtual void onInfoPressed(CCObject* sender);
+        virtual void finishDownload();
 
-    private:
+    protected:
         enum class DownloadState {
             NotDownloaded,
             Downloading,
             Downloaded,
         };
 
-        void startDownload();
-        void cancelDownload();
+        virtual void startDownload();
+        virtual void cancelDownload();
         void refreshActionButtons();
         void ensurePreviewButton();
         void removePreviewButton();
@@ -40,6 +41,7 @@ namespace deathsounds {
         int m_downloadCount = 0;
         int32_t m_createdAt = 0;
         bool m_isLocal = false;
+        bool m_allowPreview = true;
         bool m_previewPlaying = false;
         bool m_inUse = false;
         DownloadState m_downloadState = DownloadState::NotDownloaded;

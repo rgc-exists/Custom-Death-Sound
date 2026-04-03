@@ -1,11 +1,12 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
-#include <Geode/modify/MenuLayer.hpp>
+#include <random>
 #include "Utils.hpp"
 
 using namespace geode::prelude;
 
+FMOD::Channel* playingChannel = nullptr;
 std::map<std::string, FMOD::Sound*> selectedOnlineSounds;
 std::vector<std::string> selectedOnlineSoundPaths;
 
@@ -13,7 +14,7 @@ bool deathSoundEnabled = true;
 
 void reloadSelectedOnlineSounds() {
 	for (auto& [_, sound] : selectedOnlineSounds) {
-		sound->release();
+		if (sound) sound->release();
 	}
 	selectedOnlineSounds.clear();
 
@@ -45,7 +46,7 @@ void refreshSelectedOnlineSoundsIfNeeded() {
 
 void reloadSounds() {
 	for (auto& [_, sound] : selectedOnlineSounds) {
-		sound->release();
+		if (sound) sound->release();
 	}
 	selectedOnlineSounds.clear();
 
@@ -53,42 +54,50 @@ void reloadSounds() {
 	reloadSelectedOnlineSounds();
 }
 
-$execute{
+$execute {
 	deathSoundEnabled = Mod::get()->getSettingValue<bool>("death-sound-enabled");
-
 	reloadSounds();
-
 
 	listenForSettingChanges<bool>("death-sound-enabled", [](bool value) {
 		deathSoundEnabled = value;
 		reloadSounds();
-		});
+	});
 }
 
 class $modify(FMODAudioEngine) {
 	int playEffect(gd::string path, float speed, float p2, float volume) {
-		refreshSelectedOnlineSoundsIfNeeded();
-
 		if (path == "explode_11.ogg") {
-			if (deathSoundEnabled) {
-				if (selectedOnlineSounds.size() > 0) {
-					auto it = selectedOnlineSounds.begin();
-					std::advance(it, rand() % selectedOnlineSounds.size());
-					path = it->first;
-				} else {
-					FMODAudioEngine::playEffect(path, speed, p2, volume);
-					return 1;
-				}
+			refreshSelectedOnlineSoundsIfNeeded();
+
+			if (deathSoundEnabled && !selectedOnlineSounds.empty()) {
+				static std::default_random_engine engine{ std::random_device{}() };
+				std::uniform_int_distribution<size_t> dist(0, selectedOnlineSounds.size() - 1);
+
+				auto it = selectedOnlineSounds.begin();
+				std::advance(it, dist(engine));
+
+				FMOD::Sound* sound = it->second;
 
 				float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
 				float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
-				if (maxPitch <= minPitch) {
-					speed = minPitch;
+				float pitch = speed;
+				if (maxPitch > minPitch) {
+					pitch = minPitch + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / (maxPitch - minPitch));
 				} else {
-					speed = minPitch + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX) / (maxPitch - minPitch));
+					pitch = minPitch;
 				}
 
-				volume = Mod::get()->getSettingValue<double>("volume");
+				float customVolume = Mod::get()->getSettingValue<double>("volume");
+
+				FMOD_RESULT result = m_system->playSound(sound, nullptr, false, &playingChannel);
+				if (result == FMOD_OK && playingChannel) {
+					playingChannel->setVolume(customVolume * getEffectsVolume());
+					playingChannel->setPitch(pitch);
+				} else {
+					log::error("playSound returned error!");
+				}
+
+				return 1;
 			}
 		}
 
