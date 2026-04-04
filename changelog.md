@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.0.0
+## v2.0.0-beta.1
 
 Credits to OmgRod for this MASSIVE update!
 

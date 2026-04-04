@@ -25,6 +25,7 @@ private:
         CCMenu* errorMenu = nullptr;
         CCMenuItemSpriteExtra* resetToFirstPageBtn = nullptr;
         CCClippingNode* clipping = nullptr;
+        CCMenuItemSpriteExtra* searchFilterBtn = nullptr;
     };
 
     CCLayerMultiplexR* m_tabHost = nullptr;
@@ -44,6 +45,10 @@ private:
     GeodeTabSprite* m_downloadedTabSprite = nullptr;
     GeodeTabSprite* m_onlineTabSprite = nullptr;
     GeodeTabSprite* m_packsTabSprite = nullptr;
+    std::string m_onlineSearchQuery;
+    bool m_onlineRecent = false;
+    std::string m_packSearchQuery;
+    bool m_packRecent = false;
     Tab m_activeTab = Tab::OnlineSounds;
 
     TabWidgets& widgetsForTab(Tab tab);
@@ -68,6 +73,10 @@ protected:
     void clearList(TabWidgets& widgets);
     void addSimpleRow(TabWidgets& widgets, int index, const std::string& title, const std::string& subtitle);
     void updateTabVisuals();
+    void refreshSearchFilterButtonVisual(Tab tab);
+    std::string& queryForTab(Tab tab);
+    bool& recentForTab(Tab tab);
+    bool filtersSetForTab(Tab tab) const;
     void switchTab(Tab tab);
     void selectDownloadedTab(CCObject*);
     void selectOnlineTab(CCObject*);
@@ -75,6 +84,7 @@ protected:
     void refreshPage(CCObject*);
     void nextPage(CCObject*);
     void prevPage(CCObject*);
+    void openSearchFilters(CCObject*);
     void openModSettings(CCObject*);
     void openSfxFolder(CCObject*);
     void resetToFirstPage(CCObject*);

@@ -31,6 +31,22 @@ namespace deathsounds {
             makeGetRequest("/getTopSFXList", params, std::move(onComplete), std::move(onError));
         }
 
+        void searchSFX(const std::string& query, int limit, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::vector<std::pair<std::string, std::string>> params = {
+                {"query", query},
+                {"limit", std::to_string(limit)}
+            };
+            makeGetRequest("/sfx/search", params, std::move(onComplete), std::move(onError));
+        }
+
+        void searchPacks(const std::string& query, int limit, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::vector<std::pair<std::string, std::string>> params = {
+                {"query", query},
+                {"limit", std::to_string(limit)}
+            };
+            makeGetRequest("/pack/search", params, std::move(onComplete), std::move(onError));
+        }
+
         void getPackInfo(const std::string& packID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
             makeGetRequest(fmt::format("/pack/{}", packID), {}, std::move(onComplete), std::move(onError));
         }
