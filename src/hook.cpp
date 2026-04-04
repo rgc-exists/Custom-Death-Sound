@@ -2,7 +2,6 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
 #include <chrono>
-#include <cstdlib>
 #include <random>
 #include "Utils.hpp"
 
@@ -16,29 +15,7 @@ bool deathSoundEnabled = true;
 std::mt19937 soundRng;
 
 std::filesystem::path transcodeLoadedSoundIfNeeded(std::filesystem::path const& originalPath) {
-	auto convertedPath = originalPath;
-	convertedPath += ".16.wav";
-
-	if (std::filesystem::exists(convertedPath)) {
-		return convertedPath;
-	}
-
-	std::error_code ec;
-	std::filesystem::remove(convertedPath, ec);
-
-#ifdef _WIN32
-	auto command = std::string("ffmpeg -y -hide_banner -loglevel error -i \"") + originalPath.string() +
-		"\" -acodec pcm_s16le \"" + convertedPath.string() + "\" >nul 2>&1";
-#else
-	auto command = std::string("ffmpeg -y -hide_banner -loglevel error -i \"") + originalPath.string() +
-		"\" -acodec pcm_s16le \"" + convertedPath.string() + "\" >/dev/null 2>&1";
-#endif
-
-	if (std::system(command.c_str()) == 0 && std::filesystem::exists(convertedPath)) {
-		return convertedPath;
-	}
-
-	return originalPath;
+	return deathsounds::utils::ensurePlayableSfxPath(originalPath);
 }
 
 void seedSoundRngFromUnixMs() {
