@@ -4,11 +4,10 @@
 #include "CCLayerMultiplexR.hpp"
 #include "geode/GeodeTabSprite.hpp"
 #include <Geode/Geode.hpp>
-#include <functional>
 
 using namespace geode::prelude;
 
-class SFXIndexPopup : public geode::Popup, SetTextPopupDelegate {
+class SFXIndexPopup : public Popup, SetTextPopupDelegate {
 private:
     enum class Tab {
         Downloaded,
@@ -47,8 +46,10 @@ private:
     GeodeTabSprite* m_packsTabSprite = nullptr;
     std::string m_onlineSearchQuery;
     bool m_onlineRecent = false;
+    bool m_onlineInUse = false;
     std::string m_packSearchQuery;
     bool m_packRecent = false;
+    bool m_packInUse = false;
     Tab m_activeTab = Tab::OnlineSounds;
 
     TabWidgets& widgetsForTab(Tab tab);
@@ -76,6 +77,7 @@ protected:
     void refreshSearchFilterButtonVisual(Tab tab);
     std::string& queryForTab(Tab tab);
     bool& recentForTab(Tab tab);
+    bool& inUseForTab(Tab tab);
     bool filtersSetForTab(Tab tab) const;
     void switchTab(Tab tab);
     void selectDownloadedTab(CCObject*);

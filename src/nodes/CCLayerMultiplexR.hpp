@@ -1,8 +1,6 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include <initializer_list>
-#include <vector>
 
 using namespace geode::prelude;
 

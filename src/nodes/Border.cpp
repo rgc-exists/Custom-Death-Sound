@@ -134,9 +134,7 @@ ccColor4B deathsounds::Border::getBackgroundColor() {
 void deathsounds::Border::setNode(CCNode* node) {
     CCNode* content = this->getChildByID("border_content"_spr);
 
-    // Can't assume an ID as the node is a user input and may have its ID changed
     if (CCNode* oldNode = content->getChildByIndex(0)) {
-        // Not going to mess with releasing the node, I'll leave that to the user
         oldNode->removeFromParent();
     }
 

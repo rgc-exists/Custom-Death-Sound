@@ -35,5 +35,7 @@ namespace deathsounds {
         void cancelPackDownload();
         void downloadNextSound();
         void notifyProgress(std::string const& message, NotificationIcon icon = NotificationIcon::Info, float time = 0.8f);
+        void setPackUsageEnabled(bool enabled);
+        void disablePackSoundsRespectingOtherPacks();
     };
 }

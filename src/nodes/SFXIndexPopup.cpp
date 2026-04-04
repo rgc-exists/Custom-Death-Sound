@@ -7,8 +7,6 @@
 #include "../Utils.hpp"
 #include <Geode/ui/BasedButton.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
-#include <algorithm>
-#include <cctype>
 
 using namespace geode::prelude;
 
@@ -129,12 +127,19 @@ bool& SFXIndexPopup::recentForTab(Tab tab) {
     return m_packRecent;
 }
 
+bool& SFXIndexPopup::inUseForTab(Tab tab) {
+    if (tab == Tab::OnlineSounds) {
+        return m_onlineInUse;
+    }
+    return m_packInUse;
+}
+
 bool SFXIndexPopup::filtersSetForTab(Tab tab) const {
     if (tab == Tab::OnlineSounds) {
-        return !m_onlineSearchQuery.empty() || m_onlineRecent;
+        return !m_onlineSearchQuery.empty() || m_onlineRecent || m_onlineInUse;
     }
     if (tab == Tab::SoundPacks) {
-        return !m_packSearchQuery.empty() || m_packRecent;
+        return !m_packSearchQuery.empty() || m_packRecent || m_packInUse;
     }
     return false;
 }
@@ -343,10 +348,10 @@ bool SFXIndexPopup::init(bool settingsEnabled) {
         widgets.layer->addChild(filterMenu, 20);
 
         auto filterTopIcon = CCSprite::createWithSpriteFrameName("GJ_filterIcon_001.png");
-        auto filterButtonSprite = geode::EditorButtonSprite::create(
+        auto filterButtonSprite = EditorButtonSprite::create(
             filterTopIcon,
-            geode::EditorBaseColor::Green,
-            geode::EditorBaseSize::Normal
+            EditorBaseColor::Green,
+            EditorBaseSize::Normal
         );
         widgets.searchFilterBtn = CCMenuItemSpriteExtra::create(
             filterButtonSprite,
@@ -416,6 +421,16 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
 
     populateTabRows(widgets, [&](int& index, float& totalHeight) {
         for (auto& sfxItem : result) {
+            auto sfxId = sfxItem["id"].asString().unwrap();
+            auto sfxUrl = sfxItem["url"].asString().unwrap();
+
+            if (m_onlineInUse) {
+                auto path = deathsounds::utils::getSfxDownloadPath(sfxId, sfxUrl);
+                if (!std::filesystem::exists(path) || !deathsounds::utils::isOnlineSfxPathUsed(path)) {
+                    continue;
+                }
+            }
+
             std::vector<gd::string> tags;
             if (sfxItem.contains("tags") && sfxItem["tags"].isArray()) {
                 for (auto const& tagValue : sfxItem["tags"]) {
@@ -427,9 +442,9 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
 
             auto cell = deathsounds::SFXCell::create(
                 index,
-                sfxItem["id"].asString().unwrap(),
+                sfxId,
                 sfxItem["name"].asString().unwrap(),
-                sfxItem["url"].asString().unwrap(),
+                sfxUrl,
                 sfxItem["downloads"].asInt().unwrap(),
                 static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap()),
                 false,
@@ -459,6 +474,41 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
 
     auto const& packs = result.contains("data") ? result["data"] : result;
 
+    auto resolvePackSoundPath = [](gd::string const& soundId) {
+        auto fallback = deathsounds::utils::getSfxDownloadPath(soundId, std::string("/sounds/") + soundId + ".wav");
+        if (std::filesystem::exists(fallback)) {
+            return fallback;
+        }
+
+        auto downloadDir = Mod::get()->getConfigDir() / "downloaded-sfx";
+        if (!std::filesystem::exists(downloadDir)) {
+            return fallback;
+        }
+
+        for (const auto& entry : std::filesystem::directory_iterator(downloadDir)) {
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+
+            auto path = entry.path();
+            auto ext = path.extension().string();
+            if (ext != ".wav" && ext != ".ogg" && ext != ".mp3") {
+                continue;
+            }
+
+            if (path.filename().string().ends_with(".16.wav")) {
+                continue;
+            }
+
+            auto metadata = deathsounds::utils::getDownloadedSfxMetadata(path);
+            if (metadata.id == soundId) {
+                return path;
+            }
+        }
+
+        return fallback;
+    };
+
     populateTabRows(widgets, [&](int& index, float& totalHeight) {
         for (auto& packItem : packs) {
             std::string id = "unknown-id";
@@ -479,6 +529,21 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                         soundIds.push_back(idValue.asString().unwrapOr(""));
                     }
                     ++trackCount;
+                }
+            }
+
+            if (m_packInUse) {
+                bool allUsed = !soundIds.empty();
+                for (auto const& soundId : soundIds) {
+                    auto path = resolvePackSoundPath(soundId);
+                    if (!std::filesystem::exists(path) || !deathsounds::utils::isOnlineSfxPathUsed(path)) {
+                        allUsed = false;
+                        break;
+                    }
+                }
+
+                if (!allUsed) {
+                    continue;
                 }
             }
 
@@ -617,8 +682,8 @@ void SFXIndexPopup::refreshSearchFilterButtonVisual(Tab tab) {
         return;
     }
 
-    auto color = filtersSetForTab(tab) ? geode::EditorBaseColor::Aqua : geode::EditorBaseColor::Green;
-    auto base = geode::EditorButtonSprite::create(topIcon, color, geode::EditorBaseSize::Normal);
+    auto color = filtersSetForTab(tab) ? EditorBaseColor::Aqua : EditorBaseColor::Green;
+    auto base = EditorButtonSprite::create(topIcon, color, EditorBaseSize::Normal);
     widgets.searchFilterBtn->setNormalImage(base);
 }
 
@@ -650,6 +715,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
     int requestedPage = pageForTab(requestedTab);
     std::string query = trim(queryForTab(requestedTab));
     bool recent = recentForTab(requestedTab);
+    bool inUse = inUseForTab(requestedTab);
     bool usingSearchQuery = !query.empty();
 
     auto shouldShowResetToFirstPage = [](std::string const& error) {
@@ -666,7 +732,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
 
     showLoading();
 
-    auto onSuccess = [this, requestedTab, requestedPage, usingSearchQuery, shouldShowResetToFirstPage](const matjson::Value& result) {
+    auto onSuccess = [this, requestedTab, requestedPage, usingSearchQuery, inUse, shouldShowResetToFirstPage](const matjson::Value& result) {
         auto payload = result.contains("data") ? result["data"] : result;
 
         if (requestedTab == Tab::OnlineSounds) {
@@ -680,14 +746,15 @@ void SFXIndexPopup::refreshPage(CCObject*) {
         }
 
         if (!result.contains("error")) {
-            if (usingSearchQuery) {
+            if (usingSearchQuery || inUse) {
                 setPaginationVisible(false);
 
                 int resultCount = 0;
-                if (payload.isArray()) {
-                    resultCount = static_cast<int>(payload.size());
+                auto& widgets = widgetsForTab(requestedTab);
+                if (widgets.list && widgets.list->m_contentLayer) {
+                    resultCount = static_cast<int>(widgets.list->m_contentLayer->getChildrenCount());
                 }
-                setPageText(fmt::format("Search Results ({})", resultCount));
+                setPageText(fmt::format("Filtered Results ({})", resultCount));
             } else {
                 int maxPage = 1;
                 if (result.contains("totalPages")) {
@@ -782,19 +849,22 @@ void SFXIndexPopup::openSearchFilters(CCObject*) {
     auto targetTab = m_activeTab;
     auto& tabQuery = queryForTab(targetTab);
     auto& tabRecent = recentForTab(targetTab);
+    auto& tabInUse = inUseForTab(targetTab);
 
     if (filtersSetForTab(targetTab)) {
         tabQuery.clear();
         tabRecent = false;
+        tabInUse = false;
         pageForTab(targetTab) = 1;
         refreshSearchFilterButtonVisual(targetTab);
         refreshPage(nullptr);
         return;
     }
 
-    if (auto popup = SearchFilterPopup::create(tabQuery, tabRecent, [this, targetTab](std::string query, bool recent) {
+    if (auto popup = SearchFilterPopup::create(tabQuery, tabRecent, tabInUse, [this, targetTab](std::string query, bool recent, bool inUse) {
         queryForTab(targetTab) = trim(std::move(query));
         recentForTab(targetTab) = recent;
+        inUseForTab(targetTab) = inUse;
         pageForTab(targetTab) = 1;
         refreshSearchFilterButtonVisual(targetTab);
         if (m_activeTab == targetTab) {
@@ -824,7 +894,7 @@ void SFXIndexPopup::openSfxFolder(CCObject*) {
     auto downloadDir = Mod::get()->getConfigDir() / "downloaded-sfx";
     std::error_code ec;
     std::filesystem::create_directories(downloadDir, ec);
-    geode::utils::file::openFolder(downloadDir.string());
+    utils::file::openFolder(downloadDir.string());
 }
 
 void SFXIndexPopup::resetToFirstPage(CCObject*) {

@@ -7,7 +7,7 @@
 		"ios": "2.2081"
 	},
 	"id": "rgc_exists.death_sfx_changer",
-	"name": "Custom Death Sound Reimagined",
+	"name": "Custom Death Sound",
 	"version": "v2.0.0-beta.1",
 	"developers": [ "OmgRod", "RGC Exists" ],
 	"description": "A mod for changing the death sound effect, but with extra randomization features.",
@@ -73,6 +73,42 @@
 			"default": 1,
 			"min": 0.25,
 			"max": 2.5,
+			"control": {
+				"slider-step": 0.05,
+				"slider": true,
+				"input": true
+			}
+		},
+		"level-complete-title": {
+			"type": "title",
+			"name": "Level Complete",
+			"description": "Easily edit the level complete sound effect. Only one sound is allowed at a time unfortunately..."
+		},
+		"level-complete-path": {
+			"type": "file",
+			"name": "Level Complete Sound File",
+			"default": "{gd_dir}/resources/endStart_02.ogg",
+			"control": {
+				"filters": [
+					{
+						"files": [ "*.ogg", "*.wav", "*.mp3", "*.flac" ],
+						"description": "Audio files"
+					}
+				]
+			}
+		},
+		"level-complete-enabled": {
+			"type": "bool",
+			"name": "Enable Custom Level Complete Sound",
+			"default": false,
+			"description": "Play a custom sound when completing a level"
+		},
+		"level-complete-volume": {
+			"name": "Level Complete Volume",
+			"type": "float",
+			"default": 1,
+			"min": 0.0,
+			"max": 3.0,
 			"control": {
 				"slider-step": 0.05,
 				"slider": true,

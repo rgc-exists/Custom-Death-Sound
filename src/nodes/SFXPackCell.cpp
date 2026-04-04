@@ -2,7 +2,122 @@
 #include "../Requests.hpp"
 #include <Geode/ui/Notification.hpp>
 #include <Geode/utils/web.hpp>
-#include <filesystem>
+
+namespace {
+    constexpr auto kEnabledPackIdsKey = "enabled-online-pack-ids";
+    constexpr auto kDownloadedPackIdsKey = "downloaded-online-pack-ids";
+
+    std::string packSoundsKey(std::string const& packId) {
+        return fmt::format("enabled-online-pack-sounds-{}", packId);
+    }
+
+    std::string downloadedPackSoundsKey(std::string const& packId) {
+        return fmt::format("downloaded-online-pack-sounds-{}", packId);
+    }
+
+    std::vector<std::string> getEnabledPackIds() {
+        auto ids = Mod::get()->getSavedValue<std::vector<std::string>>(kEnabledPackIdsKey, {});
+        std::sort(ids.begin(), ids.end());
+        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+        return ids;
+    }
+
+    void setEnabledPackIds(std::vector<std::string> const& ids) {
+        auto deduped = ids;
+        std::sort(deduped.begin(), deduped.end());
+        deduped.erase(std::unique(deduped.begin(), deduped.end()), deduped.end());
+        Mod::get()->setSavedValue(kEnabledPackIdsKey, deduped);
+    }
+
+    std::vector<std::string> getDownloadedPackIds() {
+        auto ids = Mod::get()->getSavedValue<std::vector<std::string>>(kDownloadedPackIdsKey, {});
+        std::sort(ids.begin(), ids.end());
+        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+        return ids;
+    }
+
+    void setDownloadedPackIds(std::vector<std::string> const& ids) {
+        auto deduped = ids;
+        std::sort(deduped.begin(), deduped.end());
+        deduped.erase(std::unique(deduped.begin(), deduped.end()), deduped.end());
+        Mod::get()->setSavedValue(kDownloadedPackIdsKey, deduped);
+    }
+
+    void registerPackUsage(std::string const& packId, std::vector<gd::string> const& soundIds) {
+        auto ids = getEnabledPackIds();
+        if (std::find(ids.begin(), ids.end(), packId) == ids.end()) {
+            ids.push_back(packId);
+            setEnabledPackIds(ids);
+        }
+
+        std::vector<std::string> storedSounds;
+        storedSounds.reserve(soundIds.size());
+        for (auto const& soundId : soundIds) {
+            storedSounds.push_back(static_cast<std::string>(soundId));
+        }
+        Mod::get()->setSavedValue(packSoundsKey(packId), storedSounds);
+    }
+
+    std::unordered_set<std::string> collectOtherEnabledPackSounds(std::string const& excludedPackId) {
+        std::unordered_set<std::string> sounds;
+        for (auto const& packId : getEnabledPackIds()) {
+            if (packId == excludedPackId) {
+                continue;
+            }
+
+            auto ids = Mod::get()->getSavedValue<std::vector<std::string>>(packSoundsKey(packId), {});
+            for (auto const& soundId : ids) {
+                sounds.insert(soundId);
+            }
+        }
+        return sounds;
+    }
+
+    void unregisterPackUsage(std::string const& packId) {
+        auto ids = getEnabledPackIds();
+        ids.erase(std::remove(ids.begin(), ids.end(), packId), ids.end());
+        setEnabledPackIds(ids);
+        Mod::get()->setSavedValue(packSoundsKey(packId), std::vector<std::string>{});
+    }
+
+    std::vector<std::string> toStdSoundIds(std::vector<gd::string> const& soundIds) {
+        std::vector<std::string> ids;
+        ids.reserve(soundIds.size());
+        for (auto const& soundId : soundIds) {
+            ids.push_back(static_cast<std::string>(soundId));
+        }
+        std::sort(ids.begin(), ids.end());
+        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+        return ids;
+    }
+
+    void registerDownloadedPackMetadata(std::string const& packId, std::vector<gd::string> const& soundIds) {
+        auto ids = getDownloadedPackIds();
+        if (std::find(ids.begin(), ids.end(), packId) == ids.end()) {
+            ids.push_back(packId);
+            setDownloadedPackIds(ids);
+        }
+
+        Mod::get()->setSavedValue(downloadedPackSoundsKey(packId), toStdSoundIds(soundIds));
+    }
+
+    void removeDownloadedPackMetadata(std::string const& packId) {
+        auto ids = getDownloadedPackIds();
+        ids.erase(std::remove(ids.begin(), ids.end(), packId), ids.end());
+        setDownloadedPackIds(ids);
+        Mod::get()->setSavedValue(downloadedPackSoundsKey(packId), std::vector<std::string>{});
+    }
+
+    std::vector<gd::string> getDownloadedPackSoundIds(std::string const& packId) {
+        std::vector<gd::string> ids;
+        auto stored = Mod::get()->getSavedValue<std::vector<std::string>>(downloadedPackSoundsKey(packId), {});
+        ids.reserve(stored.size());
+        for (auto const& soundId : stored) {
+            ids.push_back(soundId);
+        }
+        return ids;
+    }
+}
 
 namespace deathsounds {
     bool SFXPackCell::init(int index, gd::string id, gd::string name, std::vector<gd::string> soundIds, int downloads, int32_t createdAt) {
@@ -136,9 +251,11 @@ namespace deathsounds {
         for (auto const& soundId : m_soundIds) {
             auto path = resolveSoundPath(soundId);
             if (!std::filesystem::exists(path)) {
+                if (m_inUse) {
+                    disablePackSoundsRespectingOtherPacks();
+                }
                 m_downloadState = DownloadState::NotDownloaded;
                 m_inUse = false;
-                utils::setOnlineSfxPathUsed(path, false);
                 refreshActionButtons();
                 return;
             }
@@ -175,7 +292,7 @@ namespace deathsounds {
     }
 
     void SFXPackCell::notifyProgress(std::string const& message, NotificationIcon icon, float time) {
-        if (auto notif = geode::Notification::create(message, icon, time)) {
+        if (auto notif = Notification::create(message, icon, time)) {
             notif->show();
         }
     }
@@ -239,6 +356,7 @@ namespace deathsounds {
                 m_downloadState = m_preDownloadState;
                 m_inUse = m_preDownloadInUse;
             } else {
+                registerDownloadedPackMetadata(m_sfxId, m_soundIds);
                 recomputePackStateFromSounds(true);
                 DSRequest::get()->incrementPackDownload(m_sfxId);
                 ++m_serverDownloads;
@@ -367,24 +485,51 @@ namespace deathsounds {
 
         auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
         bool enableRequested = toggler ? toggler->isOn() : !m_inUse;
-        m_inUse = enableRequested;
-
-        int affected = 0;
-        for (auto const& soundId : m_soundIds) {
-            auto path = resolveSoundPath(soundId);
-            utils::setOnlineSfxPathUsed(path, enableRequested);
-            ++affected;
-        }
+        setPackUsageEnabled(enableRequested);
 
         notifyProgress(
-            fmt::format("{} pack sounds for random pool ({} files).", m_inUse ? "Enabled" : "Disabled", affected),
+            fmt::format("{} pack sounds for random pool ({} files).", m_inUse ? "Enabled" : "Disabled", m_soundIds.size()),
             NotificationIcon::Info,
             1.0f
         );
     }
 
+    void SFXPackCell::setPackUsageEnabled(bool enabled) {
+        if (m_soundIds.empty()) {
+            m_soundIds = getDownloadedPackSoundIds(m_sfxId);
+        }
+
+        m_inUse = enabled;
+
+        if (enabled) {
+            registerPackUsage(m_sfxId, m_soundIds);
+            for (auto const& soundId : m_soundIds) {
+                utils::setOnlineSfxPathUsed(resolveSoundPath(soundId), true);
+            }
+            return;
+        }
+
+        disablePackSoundsRespectingOtherPacks();
+    }
+
+    void SFXPackCell::disablePackSoundsRespectingOtherPacks() {
+        if (m_soundIds.empty()) {
+            m_soundIds = getDownloadedPackSoundIds(m_sfxId);
+        }
+
+        auto stillNeededByOtherPacks = collectOtherEnabledPackSounds(m_sfxId);
+        unregisterPackUsage(m_sfxId);
+
+        for (auto const& soundId : m_soundIds) {
+            auto path = resolveSoundPath(soundId);
+            if (stillNeededByOtherPacks.find(static_cast<std::string>(soundId)) == stillNeededByOtherPacks.end()) {
+                utils::setOnlineSfxPathUsed(path, false);
+            }
+        }
+    }
+
     void SFXPackCell::onInfoPressed(CCObject*) {
-        geode::createQuickPopup(
+        createQuickPopup(
             m_name.c_str(),
             fmt::format(
                 "<cb>Pack:</c> {}\n<cy>Tracks:</c> {}\n<cg>Downloads:</c> {}\n<cl>ID:</c> {}\n\n<cr>Delete will remove every sound in this pack and its metadata.</c>",
@@ -424,8 +569,10 @@ namespace deathsounds {
                     std::filesystem::remove(convertedPath, ec);
 
                     utils::removeDownloadedSfxMetadata(path);
-                    utils::setOnlineSfxPathUsed(path, false);
                 }
+
+                disablePackSoundsRespectingOtherPacks();
+                removeDownloadedPackMetadata(m_sfxId);
 
                 m_downloadState = DownloadState::NotDownloaded;
                 m_inUse = false;

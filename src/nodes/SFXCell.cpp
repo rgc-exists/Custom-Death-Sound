@@ -2,8 +2,6 @@
 #include "../Utils.hpp"
 #include "../Requests.hpp"
 #include <Geode/utils/web.hpp>
-#include <algorithm>
-#include <cctype>
 
 namespace deathsounds {
     namespace {
@@ -457,7 +455,7 @@ namespace deathsounds {
     void SFXCell::onInfoPressed(CCObject*) {
         auto uploadedText = m_isLocal ? std::string("Unknown") : deathsounds::utils::formatDate(m_createdAt);
         auto downloadsText = m_isLocal ? std::string("Unknown") : fmt::to_string(m_downloadCount);
-        geode::createQuickPopup(
+        createQuickPopup(
             m_name.c_str(),
             fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}",
                 m_name, uploadedText, downloadsText),
