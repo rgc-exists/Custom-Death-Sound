@@ -202,58 +202,58 @@ namespace deathsounds {
             downloadsText->setScale(0.4f);
             downloadsText->setPosition({ 30.f, 20.f });
             widget->addChild(downloadsText);
+        }
 
-            if (m_showTags && !m_tags.empty()) {
-                m_tagMenu = CCMenu::create();
-                m_tagMenu->setPosition({ 0.f, 0.f });
-                widget->addChild(m_tagMenu, 510);
+        if (m_showTags && !m_tags.empty()) {
+            m_tagMenu = CCMenu::create();
+            m_tagMenu->setPosition({ 0.f, 0.f });
+            widget->addChild(m_tagMenu, 510);
 
-                float badgeX = 66.f;
-                constexpr float badgeY = 20.f;
-                constexpr float badgeGap = 6.f;
-                float maxRight = m_useToggle ? (m_useToggle->getPositionX() - 18.f) : 250.f;
+            float badgeX = m_isLocal ? 20.f : 66.f;
+            constexpr float badgeY = 20.f;
+            constexpr float badgeGap = 6.f;
+            float maxRight = m_useToggle ? (m_useToggle->getPositionX() - 18.f) : 250.f;
 
-                for (auto const& tag : m_tags) {
-                    int badgeId = 0;
-                    if (tag == "long") {
-                        badgeId = TagBadgeLong;
-                    } else if (tag == "loud") {
-                        badgeId = TagBadgeLoud;
-                    }
-
-                    if (badgeId == 0) {
-                        continue;
-                    }
-
-                    auto info = getTagBadgeInfo(badgeId);
-                    CCSprite* badgeSprite = nullptr;
-                    if (badgeId == TagBadgeLong) {
-                        badgeSprite = CCSprite::create("longBadge.png"_spr);
-                    } else if (badgeId == TagBadgeLoud) {
-                        badgeSprite = CCSprite::create("loudBadge.png"_spr);
-                    }
-                    if (!badgeSprite) {
-                        continue;
-                    }
-                    badgeSprite->setScale(0.7f);
-
-                    auto badgeBtn = CCMenuItemSpriteExtra::create(
-                        badgeSprite,
-                        this,
-                        menu_selector(SFXCell::onTagBadgePressed)
-                    );
-                    badgeBtn->setTag(badgeId);
-
-                    float badgeWidth = badgeBtn->getContentWidth();
-                    float centerX = badgeX + (badgeWidth * 0.5f);
-                    if ((centerX + badgeWidth * 0.5f) > maxRight) {
-                        break;
-                    }
-
-                    badgeBtn->setPosition({ centerX, badgeY });
-                    m_tagMenu->addChild(badgeBtn);
-                    badgeX = centerX + (badgeWidth * 0.5f) + badgeGap;
+            for (auto const& tag : m_tags) {
+                int badgeId = 0;
+                if (tag == "long") {
+                    badgeId = TagBadgeLong;
+                } else if (tag == "loud") {
+                    badgeId = TagBadgeLoud;
                 }
+
+                if (badgeId == 0) {
+                    continue;
+                }
+
+                auto info = getTagBadgeInfo(badgeId);
+                CCSprite* badgeSprite = nullptr;
+                if (badgeId == TagBadgeLong) {
+                    badgeSprite = CCSprite::create("longBadge.png"_spr);
+                } else if (badgeId == TagBadgeLoud) {
+                    badgeSprite = CCSprite::create("loudBadge.png"_spr);
+                }
+                if (!badgeSprite) {
+                    continue;
+                }
+                badgeSprite->setScale(0.7f);
+
+                auto badgeBtn = CCMenuItemSpriteExtra::create(
+                    badgeSprite,
+                    this,
+                    menu_selector(SFXCell::onTagBadgePressed)
+                );
+                badgeBtn->setTag(badgeId);
+
+                float badgeWidth = badgeBtn->getContentWidth();
+                float centerX = badgeX + (badgeWidth * 0.5f);
+                if ((centerX + badgeWidth * 0.5f) > maxRight) {
+                    break;
+                }
+
+                badgeBtn->setPosition({ centerX, badgeY });
+                m_tagMenu->addChild(badgeBtn);
+                badgeX = centerX + (badgeWidth * 0.5f) + badgeGap;
             }
         }
 
