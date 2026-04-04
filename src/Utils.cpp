@@ -1,6 +1,8 @@
 #include "Utils.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cctype>
 #include <fstream>
 #include <iterator>
 #include <vector>
@@ -33,14 +35,6 @@ namespace deathsounds::utils {
 
         bool isWavPath(std::filesystem::path const& path) {
             return lowerCopy(path.extension().string()) == ".wav";
-        }
-
-        bool isMp3Path(std::filesystem::path const& path) {
-            return lowerCopy(path.extension().string()) == ".mp3";
-        }
-
-        bool isOggPath(std::filesystem::path const& path) {
-            return lowerCopy(path.extension().string()) == ".ogg";
         }
 
         uint16_t readU16LE(std::vector<uint8_t> const& bytes, size_t offset) {
@@ -180,11 +174,11 @@ namespace deathsounds::utils {
                 return true;
             }
 
-            if (isWavPath(originalPath)) {
-                return convertPcm24WavToPcm16(originalPath, convertedPath) || std::filesystem::exists(originalPath);
+            if (!isWavPath(originalPath)) {
+                return false;
             }
 
-            return isMp3Path(originalPath) || isOggPath(originalPath) ? std::filesystem::exists(originalPath) : std::filesystem::exists(originalPath);
+            return convertPcm24WavToPcm16(originalPath, convertedPath) && std::filesystem::exists(convertedPath);
         }
     }
 
@@ -242,7 +236,7 @@ namespace deathsounds::utils {
         auto convertedPath = originalPath;
         convertedPath += ".16.wav";
 
-        if (ensurePcm16WavFromAnyAudio(originalPath, convertedPath)) {
+        if (ensurePcm16WavFromAnyAudio(originalPath, convertedPath) && std::filesystem::exists(convertedPath)) {
             return convertedPath;
         }
 
@@ -412,6 +406,14 @@ namespace deathsounds::utils {
 
         auto absSoundPath = std::filesystem::absolute(soundPath);
         FMOD_RESULT createResult = fmod->m_system->createSound(soundPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+
+        if (createResult != FMOD_OK && soundPath != originalPath) {
+            state.sound = nullptr;
+            soundPath = originalPath;
+            absSoundPath = std::filesystem::absolute(soundPath);
+            createResult = fmod->m_system->createSound(soundPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+        }
+
         if (createResult != FMOD_OK && soundPath == originalPath) {
             auto convertedPath = originalPath;
             convertedPath += ".16.wav";
