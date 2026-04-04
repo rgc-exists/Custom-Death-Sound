@@ -240,6 +240,7 @@ namespace deathsounds {
                 m_inUse = m_preDownloadInUse;
             } else {
                 recomputePackStateFromSounds(true);
+                DSRequest::get()->incrementPackDownload(m_sfxId);
             }
             refreshActionButtons();
 

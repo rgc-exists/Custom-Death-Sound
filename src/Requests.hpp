@@ -35,6 +35,10 @@ namespace deathsounds {
             makeGetRequest(fmt::format("/pack/{}", packID), {}, std::move(onComplete), std::move(onError));
         }
 
+        void incrementPackDownload(const std::string& packID, std::function<void(const matjson::Value&)> onComplete = nullptr, std::function<void(const matjson::Value&)> onError = nullptr) {
+            makeGetRequest(fmt::format("/pack/{}/download", packID), {}, std::move(onComplete), std::move(onError));
+        }
+
         void getSFXInfo(const std::string& sfxID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
             makeGetRequest(fmt::format("/sfx/{}", sfxID), {}, std::move(onComplete), std::move(onError));
         }
