@@ -39,11 +39,11 @@ namespace deathsounds {
         downloadsSprite->setPosition({ 20.f, 20.f });
         widget->addChild(downloadsSprite);
 
-        auto downloadsText = CCLabelBMFont::create(formatCountCompact(m_serverDownloads).c_str(), "bigFont.fnt");
-        downloadsText->setAnchorPoint({ 0.f, 0.5f });
-        downloadsText->setScale(0.4f);
-        downloadsText->setPosition({ 30.f, 20.f });
-        widget->addChild(downloadsText);
+        this->m_downloadsText = CCLabelBMFont::create(formatCountCompact(m_serverDownloads).c_str(), "bigFont.fnt");
+        this->m_downloadsText->setAnchorPoint({ 0.f, 0.5f });
+        this->m_downloadsText->setScale(0.4f);
+        this->m_downloadsText->setPosition({ 30.f, 20.f });
+        widget->addChild(this->m_downloadsText);
 
         auto tracksSprite = CCSprite::createWithSpriteFrameName("GJ_musicIcon_001.png");
         tracksSprite->setPosition({ 95.f, 20.f });
@@ -241,6 +241,10 @@ namespace deathsounds {
             } else {
                 recomputePackStateFromSounds(true);
                 DSRequest::get()->incrementPackDownload(m_sfxId);
+                ++m_serverDownloads;
+                if (this->m_downloadsText) {
+                    this->m_downloadsText->setString(formatCountCompact(m_serverDownloads).c_str());
+                }
             }
             refreshActionButtons();
 

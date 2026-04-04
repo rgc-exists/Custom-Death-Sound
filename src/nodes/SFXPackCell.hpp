@@ -17,6 +17,7 @@ namespace deathsounds {
         std::vector<gd::string> m_soundIds;
         int m_trackCount = 0;
         int m_serverDownloads = 0;
+        CCLabelBMFont* m_downloadsText = nullptr;
         size_t m_downloadIndex = 0;
         int m_downloadedCount = 0;
         int m_skippedCount = 0;

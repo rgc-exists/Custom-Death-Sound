@@ -2,6 +2,7 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
 #include <chrono>
+#include <cstdlib>
 #include <random>
 #include "Utils.hpp"
 
@@ -13,6 +14,32 @@ std::vector<std::string> selectedOnlineSoundPaths;
 
 bool deathSoundEnabled = true;
 std::mt19937 soundRng;
+
+std::filesystem::path transcodeLoadedSoundIfNeeded(std::filesystem::path const& originalPath) {
+	auto convertedPath = originalPath;
+	convertedPath += ".16.wav";
+
+	if (std::filesystem::exists(convertedPath)) {
+		return convertedPath;
+	}
+
+	std::error_code ec;
+	std::filesystem::remove(convertedPath, ec);
+
+#ifdef _WIN32
+	auto command = std::string("ffmpeg -y -hide_banner -loglevel error -i \"") + originalPath.string() +
+		"\" -acodec pcm_s16le \"" + convertedPath.string() + "\" >nul 2>&1";
+#else
+	auto command = std::string("ffmpeg -y -hide_banner -loglevel error -i \"") + originalPath.string() +
+		"\" -acodec pcm_s16le \"" + convertedPath.string() + "\" >/dev/null 2>&1";
+#endif
+
+	if (std::system(command.c_str()) == 0 && std::filesystem::exists(convertedPath)) {
+		return convertedPath;
+	}
+
+	return originalPath;
+}
 
 void seedSoundRngFromUnixMs() {
 	auto now = std::chrono::system_clock::now();
@@ -36,9 +63,17 @@ void reloadSelectedOnlineSounds() {
 			continue;
 		}
 
+		auto playablePath = path;
 		FMOD::Sound* sound = nullptr;
-		if (FMODAudioEngine::sharedEngine()->m_system->createSound(path.string().c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
-			selectedOnlineSounds[path.string()] = sound;
+		if (FMODAudioEngine::sharedEngine()->m_system->createSound(playablePath.string().c_str(), FMOD_DEFAULT, nullptr, &sound) != FMOD_OK) {
+			playablePath = transcodeLoadedSoundIfNeeded(path);
+			if (playablePath == path || FMODAudioEngine::sharedEngine()->m_system->createSound(playablePath.string().c_str(), FMOD_DEFAULT, nullptr, &sound) != FMOD_OK) {
+				continue;
+			}
+		}
+
+		if (sound) {
+			selectedOnlineSounds[playablePath.string()] = sound;
 		}
 	}
 

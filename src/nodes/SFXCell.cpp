@@ -1,5 +1,6 @@
 #include "SFXCell.hpp"
 #include "../Utils.hpp"
+#include "../Requests.hpp"
 #include <Geode/utils/web.hpp>
 
 namespace deathsounds {
@@ -275,6 +276,7 @@ namespace deathsounds {
         m_inUse = false;
         s_downloadedSfx.insert(m_sfxId);
         utils::setOnlineSfxPathUsed(downloadPath, false);
+        deathsounds::DSRequest::get()->incrementSFXDownload(m_sfxId);
         auto absPath = std::filesystem::absolute(downloadPath);
         log::info("[SFX Download] Ready for use '{}' ({}) at {}:1", m_name, m_sfxId, absPath.string());
         refreshActionButtons();

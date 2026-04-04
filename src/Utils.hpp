@@ -22,6 +22,7 @@ namespace deathsounds::utils {
 
     std::filesystem::path getSfxDownloadPath(std::string const& sfxId, std::string const& sfxUrl);
     std::filesystem::path getSfxPlayablePath(std::string const& sfxId, std::string const& sfxUrl);
+    std::filesystem::path ensurePlayableSfxPath(std::filesystem::path const& originalPath);
     std::filesystem::path getSfxMetadataPath(std::filesystem::path const& soundPath);
     DownloadedSfxMetadata getDownloadedSfxMetadata(std::filesystem::path const& soundPath);
     void saveDownloadedSfxMetadata(std::filesystem::path const& soundPath, std::string const& sfxId, std::string const& sfxName);

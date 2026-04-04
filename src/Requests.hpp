@@ -36,7 +36,11 @@ namespace deathsounds {
         }
 
         void incrementPackDownload(const std::string& packID, std::function<void(const matjson::Value&)> onComplete = nullptr, std::function<void(const matjson::Value&)> onError = nullptr) {
-            makeGetRequest(fmt::format("/pack/{}/download", packID), {}, std::move(onComplete), std::move(onError));
+            makeGetRequestWithListener(m_incrementListener, fmt::format("/pack/{}/download", packID), {}, std::move(onComplete), std::move(onError));
+        }
+
+        void incrementSFXDownload(const std::string& sfxID, std::function<void(const matjson::Value&)> onComplete = nullptr, std::function<void(const matjson::Value&)> onError = nullptr) {
+            makeGetRequestWithListener(m_incrementListener, fmt::format("/sfx/{}/download", sfxID), {}, std::move(onComplete), std::move(onError));
         }
 
         void getSFXInfo(const std::string& sfxID, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
@@ -49,8 +53,10 @@ namespace deathsounds {
         DSRequest& operator=(const DSRequest&) = delete;
 
         async::TaskHolder<WebResponse> m_listener;
+        async::TaskHolder<WebResponse> m_incrementListener;
 
-        void makeGetRequest(
+        void makeGetRequestWithListener(
+            async::TaskHolder<WebResponse>& listener,
             const std::string& endpointFmt,
             const std::vector<std::pair<std::string, std::string>>& queryParams,
             std::function<void(const matjson::Value&)> onComplete,
@@ -66,7 +72,7 @@ namespace deathsounds {
                 req.param(key, value);
             }
 
-            m_listener.spawn(
+            listener.spawn(
                 req.get(url),
                 [onComplete, onError](WebResponse value) {
                     matjson::Value result = matjson::Value::object();
@@ -76,18 +82,33 @@ namespace deathsounds {
                         auto jsonOpt = value.json();
                         if (jsonOpt.isOk()) {
                             result = jsonOpt.unwrap();
-                            onComplete(result);
+                            if (onComplete) {
+                                onComplete(result);
+                            }
                             return;
                         } else {
                             result["error"] = value.string().unwrap();
-                            onError(result);
+                            if (onError) {
+                                onError(result);
+                            }
                         }
                     } else {
                         result["error"] = "Request failed with code " + std::to_string(value.code());
-                        onError(result);
+                        if (onError) {
+                            onError(result);
+                        }
                     }
                 }
             );
+        }
+
+        void makeGetRequest(
+            const std::string& endpointFmt,
+            const std::vector<std::pair<std::string, std::string>>& queryParams,
+            std::function<void(const matjson::Value&)> onComplete,
+            std::function<void(const matjson::Value&)> onError
+        ) {
+            makeGetRequestWithListener(m_listener, endpointFmt, queryParams, std::move(onComplete), std::move(onError));
         }
     };
 }

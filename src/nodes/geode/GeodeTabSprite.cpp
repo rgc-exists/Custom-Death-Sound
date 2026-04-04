@@ -1,5 +1,4 @@
 #include "GeodeTabSprite.hpp"
-#include <Geode/utils/ColorProvider.hpp>
 
 bool GeodeTabSprite::init(const char* iconFrame, const char* text, float width, bool altColor) {
     if (!CCNode::init())
@@ -14,19 +13,13 @@ bool GeodeTabSprite::init(const char* iconFrame, const char* text, float width, 
     m_deselectedBG = NineSlice::createWithSpriteFrameName("geode.loader/tab-bg.png");
     m_deselectedBG->setScale(.8f);
     m_deselectedBG->setContentSize(itemSize / .8f);
-    m_deselectedBG->setColor(geode::ColorProvider::get()->color3b(
-        geode::Mod::get()->expandSpriteName("geode.loader/mod-list-tab-deselected-bg")
-    ));
+    m_deselectedBG->setColor(ccc3(54, 54, 54));
     this->addChildAtPosition(m_deselectedBG, Anchor::Center);
 
     m_selectedBG = NineSlice::createWithSpriteFrameName("geode.loader/tab-bg.png");
     m_selectedBG->setScale(.8f);
     m_selectedBG->setContentSize(itemSize / .8f);
-    m_selectedBG->setColor(to3B(geode::ColorProvider::get()->color(
-        altColor ?
-            "mod-list-tab-selected-bg-alt"_spr :
-            "mod-list-tab-selected-bg"_spr
-    )));
+    m_selectedBG->setColor(altColor ? ccc3(74, 86, 112) : ccc3(82, 72, 58));
     this->addChildAtPosition(m_selectedBG, Anchor::Center);
 
     m_icon = CCSprite::createWithSpriteFrameName(iconFrame);

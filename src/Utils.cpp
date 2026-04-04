@@ -1,5 +1,10 @@
 #include "Utils.hpp"
 
+#include <array>
+#include <fstream>
+#include <iterator>
+#include <vector>
+
 namespace deathsounds::utils {
     namespace {
         constexpr auto kUsedOnlineSfxPathsKey = "used-online-sfx-paths";
@@ -17,6 +22,25 @@ namespace deathsounds::utils {
                 return path.lexically_normal().string();
             }
             return absolute.lexically_normal().string();
+        }
+
+        std::string lowerCopy(std::string value) {
+            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+                return static_cast<char>(std::tolower(ch));
+            });
+            return value;
+        }
+
+        bool isWavPath(std::filesystem::path const& path) {
+            return lowerCopy(path.extension().string()) == ".wav";
+        }
+
+        bool isMp3Path(std::filesystem::path const& path) {
+            return lowerCopy(path.extension().string()) == ".mp3";
+        }
+
+        bool isOggPath(std::filesystem::path const& path) {
+            return lowerCopy(path.extension().string()) == ".ogg";
         }
 
         uint16_t readU16LE(std::vector<uint8_t> const& bytes, size_t offset) {
@@ -147,6 +171,21 @@ namespace deathsounds::utils {
 
             return static_cast<bool>(out);
         }
+
+        bool ensurePcm16WavFromAnyAudio(
+            std::filesystem::path const& originalPath,
+            std::filesystem::path const& convertedPath
+        ) {
+            if (std::filesystem::exists(convertedPath)) {
+                return true;
+            }
+
+            if (isWavPath(originalPath)) {
+                return convertPcm24WavToPcm16(originalPath, convertedPath) || std::filesystem::exists(originalPath);
+            }
+
+            return isMp3Path(originalPath) || isOggPath(originalPath) ? std::filesystem::exists(originalPath) : std::filesystem::exists(originalPath);
+        }
     }
 
     std::string formatDate(int32_t timestamp) {
@@ -172,6 +211,20 @@ namespace deathsounds::utils {
             }
         }
 
+        auto candidatePath = downloadsDir / filename;
+        if (std::filesystem::exists(candidatePath)) {
+            return candidatePath;
+        }
+
+        auto stem = std::filesystem::path(filename).stem().string();
+        static constexpr std::array<const char*, 4> extensions = { ".wav", ".mp3", ".ogg", ".flac" };
+        for (auto const* ext : extensions) {
+            auto altPath = downloadsDir / (stem + ext);
+            if (std::filesystem::exists(altPath)) {
+                return altPath;
+            }
+        }
+
         return downloadsDir / filename;
     }
 
@@ -182,6 +235,17 @@ namespace deathsounds::utils {
         if (std::filesystem::exists(convertedPath)) {
             return convertedPath;
         }
+        return originalPath;
+    }
+
+    std::filesystem::path ensurePlayableSfxPath(std::filesystem::path const& originalPath) {
+        auto convertedPath = originalPath;
+        convertedPath += ".16.wav";
+
+        if (ensurePcm16WavFromAnyAudio(originalPath, convertedPath)) {
+            return convertedPath;
+        }
+
         return originalPath;
     }
 
@@ -328,20 +392,15 @@ namespace deathsounds::utils {
 
         stopPreviewPlayback(state);
 
-        auto soundPath = originalPath;
-        auto existingConvertedPath = originalPath;
-        existingConvertedPath += ".16.wav";
-        if (std::filesystem::exists(existingConvertedPath)) {
-            soundPath = existingConvertedPath;
-        }
+        auto soundPath = ensurePlayableSfxPath(originalPath);
 
         auto absSoundPath = std::filesystem::absolute(soundPath);
         FMOD_RESULT createResult = fmod->m_system->createSound(soundPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
         if (createResult != FMOD_OK && soundPath == originalPath) {
             auto convertedPath = originalPath;
             convertedPath += ".16.wav";
-            if (convertPcm24WavToPcm16(originalPath, convertedPath)) {
-                log::info("[SFX Preview] Converted 24-bit WAV to 16-bit for '{}' ({}) -> {}:1", sfxName, sfxId, std::filesystem::absolute(convertedPath).string());
+            if (ensurePcm16WavFromAnyAudio(originalPath, convertedPath)) {
+                log::info("[SFX Preview] Converted audio for '{}' ({}) -> {}:1", sfxName, sfxId, std::filesystem::absolute(convertedPath).string());
                 createResult = fmod->m_system->createSound(convertedPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
                 if (createResult == FMOD_OK) {
                     soundPath = convertedPath;
