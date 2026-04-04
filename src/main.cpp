@@ -52,9 +52,9 @@ void reloadExtraSounds() {
 		std::filesystem::directory_iterator it(path, code); // Thanks to hiimjasmine for a proper error handling version of this code.
 		if (!code) {
 			for (; it != std::filesystem::end(it); it.increment(code)) {
-				if (std::find(exts.begin(), exts.end(), p.path().extension()) != exts.end()) {
+				if (std::find(exts.begin(), exts.end(), it->path().extension()) != exts.end()) {
 					FMOD::Sound* sound;
-					std::string pathStr = p.path().string();
+					std::string pathStr = it->path().string();
 					if (FMODAudioEngine::sharedEngine()->m_system->createSound(pathStr.c_str(), FMOD_DEFAULT, nullptr, &sound) == FMOD_OK) {
 						extraDeathSounds[pathStr] = sound;
 					}
