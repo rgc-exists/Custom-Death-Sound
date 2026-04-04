@@ -348,13 +348,26 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
 
     populateTabRows(widgets, [&](int& index, float& totalHeight) {
         for (auto& sfxItem : result) {
+            std::vector<gd::string> tags;
+            if (sfxItem.contains("tags") && sfxItem["tags"].isArray()) {
+                for (auto const& tagValue : sfxItem["tags"]) {
+                    if (tagValue.isString()) {
+                        tags.push_back(tagValue.asString().unwrapOr(""));
+                    }
+                }
+            }
+
             auto cell = deathsounds::SFXCell::create(
                 index,
                 sfxItem["id"].asString().unwrap(),
                 sfxItem["name"].asString().unwrap(),
                 sfxItem["url"].asString().unwrap(),
                 sfxItem["downloads"].asInt().unwrap(),
-                static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap())
+                static_cast<int32_t>(sfxItem["createdAt"].asInt().unwrap()),
+                false,
+                true,
+                tags,
+                true
             );
             cell->validateDownloadState();
             widgets.list->m_contentLayer->addChild(cell);
@@ -483,6 +496,9 @@ void SFXIndexPopup::showDownloadedResults() {
                 "/sounds/" + path.filename().string(),
                 0,
                 0,
+                true,
+                true,
+                std::vector<gd::string>(metadata.tags.begin(), metadata.tags.end()),
                 true
             );
             cell->validateDownloadState();

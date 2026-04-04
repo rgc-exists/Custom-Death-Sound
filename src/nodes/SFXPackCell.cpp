@@ -6,7 +6,7 @@
 
 namespace deathsounds {
     bool SFXPackCell::init(int index, gd::string id, gd::string name, std::vector<gd::string> soundIds, int downloads, int32_t createdAt) {
-        if (!SFXCell::init(index, id, name, makeSoundRelativeUrl(id), downloads, createdAt, true, false)) {
+        if (!SFXCell::init(index, id, name, makeSoundRelativeUrl(id), downloads, createdAt, true, false, {}, false)) {
             return false;
         }
 

@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 #include <filesystem>
+#include <vector>
 
 using namespace geode::prelude;
 
@@ -10,6 +11,7 @@ namespace deathsounds::utils {
         std::string id;
         std::string name;
         std::string path;
+        std::vector<std::string> tags;
     };
 
     struct PreviewPlaybackState {
@@ -25,7 +27,12 @@ namespace deathsounds::utils {
     std::filesystem::path ensurePlayableSfxPath(std::filesystem::path const& originalPath);
     std::filesystem::path getSfxMetadataPath(std::filesystem::path const& soundPath);
     DownloadedSfxMetadata getDownloadedSfxMetadata(std::filesystem::path const& soundPath);
-    void saveDownloadedSfxMetadata(std::filesystem::path const& soundPath, std::string const& sfxId, std::string const& sfxName);
+    void saveDownloadedSfxMetadata(
+        std::filesystem::path const& soundPath,
+        std::string const& sfxId,
+        std::string const& sfxName,
+        std::vector<std::string> const& tags = {}
+    );
     void removeDownloadedSfxMetadata(std::filesystem::path const& soundPath);
     std::string makeSfxDownloadUrl(std::string const& sfxUrl);
 

@@ -285,11 +285,23 @@ namespace deathsounds::utils {
         if (value.contains("path")) {
             metadata.path = value["path"].asString().unwrap();
         }
+        if (value.contains("tags") && value["tags"].isArray()) {
+            for (auto const& tagValue : value["tags"]) {
+                if (tagValue.isString()) {
+                    metadata.tags.push_back(tagValue.asString().unwrapOr(""));
+                }
+            }
+        }
 
         return metadata;
     }
 
-    void saveDownloadedSfxMetadata(std::filesystem::path const& soundPath, std::string const& sfxId, std::string const& sfxName) {
+    void saveDownloadedSfxMetadata(
+        std::filesystem::path const& soundPath,
+        std::string const& sfxId,
+        std::string const& sfxName,
+        std::vector<std::string> const& tags
+    ) {
         std::error_code ec;
         std::filesystem::create_directories(soundPath.parent_path(), ec);
 
@@ -298,6 +310,10 @@ namespace deathsounds::utils {
         value["id"] = sfxId;
         value["name"] = sfxName;
         value["path"] = std::filesystem::absolute(soundPath).string();
+        value["tags"] = matjson::Value::array();
+        for (auto const& tag : tags) {
+            value["tags"].push(tag);
+        }
 
         std::ofstream out(metadataPath, std::ios::binary | std::ios::trunc);
         if (!out) {

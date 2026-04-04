@@ -3,20 +3,44 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include "../Utils.hpp"
+#include <vector>
 
 using namespace geode::prelude;
 
 namespace deathsounds {
     class SFXCell : public CCLayer {
     public:
-        bool init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false, bool allowPreview = true/*, int likes, int dislikes*/);
-        static SFXCell* create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal = false, bool allowPreview = true/*, int likes, int dislikes*/);
+        bool init(
+            int index,
+            std::string id,
+            std::string name,
+            std::string url,
+            int downloads,
+            int32_t createdAt,
+            bool isLocal = false,
+            bool allowPreview = true,
+            std::vector<gd::string> tags = {},
+            bool showTags = true
+        );
+        static SFXCell* create(
+            int index,
+            std::string id,
+            std::string name,
+            std::string url,
+            int downloads,
+            int32_t createdAt,
+            bool isLocal = false,
+            bool allowPreview = true,
+            std::vector<gd::string> tags = {},
+            bool showTags = true
+        );
         void onExit() override;
         virtual void validateDownloadState();
 
         virtual void onDownloadToggle(CCObject* sender);
         virtual void onUseToggle(CCObject* sender);
         virtual void onInfoPressed(CCObject* sender);
+        void onTagBadgePressed(CCObject* sender);
         virtual void finishDownload();
 
     protected:
@@ -42,11 +66,14 @@ namespace deathsounds {
         int32_t m_createdAt = 0;
         bool m_isLocal = false;
         bool m_allowPreview = true;
+        bool m_showTags = true;
         bool m_previewPlaying = false;
         bool m_inUse = false;
+        std::vector<gd::string> m_tags;
         DownloadState m_downloadState = DownloadState::NotDownloaded;
 
         CCMenu* m_menu = nullptr;
+        CCMenu* m_tagMenu = nullptr;
         CCMenuItemToggler* m_previewToggle = nullptr;
         CCMenuItemToggler* m_downloadToggle = nullptr;
         CCMenuItemToggler* m_useToggle = nullptr;

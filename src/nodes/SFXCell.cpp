@@ -2,13 +2,76 @@
 #include "../Utils.hpp"
 #include "../Requests.hpp"
 #include <Geode/utils/web.hpp>
+#include <algorithm>
+#include <cctype>
 
 namespace deathsounds {
     namespace {
         std::unordered_set<std::string> s_downloadedSfx;
+
+        enum TagBadgeId {
+            TagBadgeLong = 1001,
+            TagBadgeLoud = 1002,
+        };
+
+        std::string normalizeTag(std::string value) {
+            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+                return static_cast<char>(std::tolower(ch));
+            });
+            return value;
+        }
+
+        std::vector<gd::string> normalizeAndOrderTags(std::vector<gd::string> tags) {
+            bool hasLong = false;
+            bool hasLoud = false;
+
+            for (auto const& tag : tags) {
+                auto normalized = normalizeTag(static_cast<std::string>(tag));
+                if (normalized == "long") {
+                    hasLong = true;
+                } else if (normalized == "loud") {
+                    hasLoud = true;
+                }
+            }
+
+            std::vector<gd::string> ordered;
+            if (hasLong) ordered.push_back("long");
+            if (hasLoud) ordered.push_back("loud");
+            return ordered;
+        }
+
+        struct TagBadgeInfo {
+            const char* title;
+            const char* body;
+        };
+
+        TagBadgeInfo getTagBadgeInfo(int badgeId) {
+            if (badgeId == TagBadgeLong) {
+                return {
+                    "Long Sound",
+                    "<cy>Long Sound</c> means the clip duration is longer than <cg>3.0 seconds</c>."
+                };
+            }
+
+            return {
+                "Volume Warning",
+                "<cr>Volume Warning</c> means the audio reaches about <cy>0 dBFS peak</c> (near full-scale digital loudness)."
+            };
+        }
     }
 
-    bool SFXCell::init(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal, bool allowPreview/*, int likes, int dislikes*/) {
+    bool SFXCell::init(
+        int index,
+        std::string id,
+        std::string name,
+        std::string url,
+        int downloads,
+        int32_t createdAt,
+        bool isLocal,
+        bool allowPreview,
+        std::vector<gd::string> tags,
+        bool showTags
+    ) {
         if (!CCLayer::init()) {
             return false;
         }
@@ -20,6 +83,8 @@ namespace deathsounds {
         m_createdAt = createdAt;
         m_isLocal = isLocal;
         m_allowPreview = allowPreview;
+        m_showTags = showTags;
+        m_tags = normalizeAndOrderTags(std::move(tags));
         auto existingPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
         bool alreadyDownloaded = std::filesystem::exists(existingPath);
         if (alreadyDownloaded) {
@@ -137,6 +202,59 @@ namespace deathsounds {
             downloadsText->setScale(0.4f);
             downloadsText->setPosition({ 30.f, 20.f });
             widget->addChild(downloadsText);
+
+            if (m_showTags && !m_tags.empty()) {
+                m_tagMenu = CCMenu::create();
+                m_tagMenu->setPosition({ 0.f, 0.f });
+                widget->addChild(m_tagMenu, 510);
+
+                float badgeX = 66.f;
+                constexpr float badgeY = 20.f;
+                constexpr float badgeGap = 6.f;
+                float maxRight = m_useToggle ? (m_useToggle->getPositionX() - 18.f) : 250.f;
+
+                for (auto const& tag : m_tags) {
+                    int badgeId = 0;
+                    if (tag == "long") {
+                        badgeId = TagBadgeLong;
+                    } else if (tag == "loud") {
+                        badgeId = TagBadgeLoud;
+                    }
+
+                    if (badgeId == 0) {
+                        continue;
+                    }
+
+                    auto info = getTagBadgeInfo(badgeId);
+                    CCSprite* badgeSprite = nullptr;
+                    if (badgeId == TagBadgeLong) {
+                        badgeSprite = CCSprite::create("longBadge.png"_spr);
+                    } else if (badgeId == TagBadgeLoud) {
+                        badgeSprite = CCSprite::create("loudBadge.png"_spr);
+                    }
+                    if (!badgeSprite) {
+                        continue;
+                    }
+                    badgeSprite->setScale(0.7f);
+
+                    auto badgeBtn = CCMenuItemSpriteExtra::create(
+                        badgeSprite,
+                        this,
+                        menu_selector(SFXCell::onTagBadgePressed)
+                    );
+                    badgeBtn->setTag(badgeId);
+
+                    float badgeWidth = badgeBtn->getContentWidth();
+                    float centerX = badgeX + (badgeWidth * 0.5f);
+                    if ((centerX + badgeWidth * 0.5f) > maxRight) {
+                        break;
+                    }
+
+                    badgeBtn->setPosition({ centerX, badgeY });
+                    m_tagMenu->addChild(badgeBtn);
+                    badgeX = centerX + (badgeWidth * 0.5f) + badgeGap;
+                }
+            }
         }
 
         /*CCSprite* likesSprite;
@@ -172,9 +290,20 @@ namespace deathsounds {
         return true;
     }
 
-    SFXCell* SFXCell::create(int index, std::string id, std::string name, std::string url, int downloads, int32_t createdAt, bool isLocal, bool allowPreview/*, int likes, int dislikes*/) {
+    SFXCell* SFXCell::create(
+        int index,
+        std::string id,
+        std::string name,
+        std::string url,
+        int downloads,
+        int32_t createdAt,
+        bool isLocal,
+        bool allowPreview,
+        std::vector<gd::string> tags,
+        bool showTags
+    ) {
         auto ret = new SFXCell();
-        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview/*, likes, dislikes*/)) {
+        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview, std::move(tags), showTags)) {
             ret->autorelease();
             return ret;
         }
@@ -271,7 +400,12 @@ namespace deathsounds {
 
     void SFXCell::finishDownload() {
         auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-        utils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name);
+        std::vector<std::string> metadataTags;
+        metadataTags.reserve(m_tags.size());
+        for (auto const& tag : m_tags) {
+            metadataTags.push_back(static_cast<std::string>(tag));
+        }
+        utils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name, metadataTags);
         m_downloadState = DownloadState::Downloaded;
         m_inUse = false;
         s_downloadedSfx.insert(m_sfxId);
@@ -349,6 +483,16 @@ namespace deathsounds {
                 refreshActionButtons();
             }
         );
+    }
+
+    void SFXCell::onTagBadgePressed(CCObject* sender) {
+        auto item = typeinfo_cast<CCNode*>(sender);
+        if (!item) {
+            return;
+        }
+
+        auto info = getTagBadgeInfo(item->getTag());
+        FLAlertLayer::create(info.title, info.body, "OK")->show();
     }
 
     void SFXCell::refreshActionButtons() {
