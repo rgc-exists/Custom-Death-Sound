@@ -18,7 +18,7 @@ namespace deathsounds {
             int32_t createdAt,
             bool isLocal = false,
             bool allowPreview = true,
-            std::vector<gd::string> tags = {},
+            std::vector<std::string> tags = {},
             bool showTags = true
         );
         static SFXCell* create(
@@ -30,7 +30,7 @@ namespace deathsounds {
             int32_t createdAt,
             bool isLocal = false,
             bool allowPreview = true,
-            std::vector<gd::string> tags = {},
+            std::vector<std::string> tags = {},
             bool showTags = true
         );
         void onExit() override;
@@ -68,7 +68,7 @@ namespace deathsounds {
         bool m_showTags = true;
         bool m_previewPlaying = false;
         bool m_inUse = false;
-        std::vector<gd::string> m_tags;
+        std::vector<std::string> m_tags;
         DownloadState m_downloadState = DownloadState::NotDownloaded;
 
         CCMenu* m_menu = nullptr;

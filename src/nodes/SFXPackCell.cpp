@@ -43,7 +43,7 @@ namespace {
         Mod::get()->setSavedValue(kDownloadedPackIdsKey, deduped);
     }
 
-    void registerPackUsage(std::string const& packId, std::vector<gd::string> const& soundIds) {
+    void registerPackUsage(std::string const& packId, std::vector<std::string> const& soundIds) {
         auto ids = getEnabledPackIds();
         if (std::find(ids.begin(), ids.end(), packId) == ids.end()) {
             ids.push_back(packId);
@@ -80,7 +80,7 @@ namespace {
         Mod::get()->setSavedValue(packSoundsKey(packId), std::vector<std::string>{});
     }
 
-    std::vector<std::string> toStdSoundIds(std::vector<gd::string> const& soundIds) {
+    std::vector<std::string> toStdSoundIds(std::vector<std::string> const& soundIds) {
         std::vector<std::string> ids;
         ids.reserve(soundIds.size());
         for (auto const& soundId : soundIds) {
@@ -91,7 +91,7 @@ namespace {
         return ids;
     }
 
-    void registerDownloadedPackMetadata(std::string const& packId, std::vector<gd::string> const& soundIds) {
+    void registerDownloadedPackMetadata(std::string const& packId, std::vector<std::string> const& soundIds) {
         auto ids = getDownloadedPackIds();
         if (std::find(ids.begin(), ids.end(), packId) == ids.end()) {
             ids.push_back(packId);
@@ -108,8 +108,8 @@ namespace {
         Mod::get()->setSavedValue(downloadedPackSoundsKey(packId), std::vector<std::string>{});
     }
 
-    std::vector<gd::string> getDownloadedPackSoundIds(std::string const& packId) {
-        std::vector<gd::string> ids;
+    std::vector<std::string> getDownloadedPackSoundIds(std::string const& packId) {
+        std::vector<std::string> ids;
         auto stored = Mod::get()->getSavedValue<std::vector<std::string>>(downloadedPackSoundsKey(packId), {});
         ids.reserve(stored.size());
         for (auto const& soundId : stored) {
@@ -120,7 +120,7 @@ namespace {
 }
 
 namespace deathsounds {
-    bool SFXPackCell::init(int index, gd::string id, gd::string name, std::vector<gd::string> soundIds, int downloads, int32_t createdAt) {
+    bool SFXPackCell::init(int index, std::string id, std::string name, std::vector<std::string> soundIds, int downloads, int32_t createdAt) {
         if (!SFXCell::init(index, id, name, makeSoundRelativeUrl(id), downloads, createdAt, true, false, {}, false)) {
             return false;
         }
@@ -174,7 +174,7 @@ namespace deathsounds {
         return true;
     }
 
-    SFXPackCell* SFXPackCell::create(int index, gd::string id, gd::string name, std::vector<gd::string> soundIds, int downloads, int32_t createdAt) {
+    SFXPackCell* SFXPackCell::create(int index, std::string id, std::string name, std::vector<std::string> soundIds, int downloads, int32_t createdAt) {
         auto ret = new SFXPackCell();
         if (ret && ret->init(index, std::move(id), std::move(name), std::move(soundIds), downloads, createdAt)) {
             ret->autorelease();
@@ -185,7 +185,7 @@ namespace deathsounds {
         return nullptr;
     }
 
-    std::string SFXPackCell::makeSoundRelativeUrl(gd::string const& soundId) {
+    std::string SFXPackCell::makeSoundRelativeUrl(std::string const& soundId) {
         return std::string("/sounds/") + std::string(soundId) + ".wav";
     }
 
@@ -208,7 +208,7 @@ namespace deathsounds {
         return s;
     }
 
-    std::filesystem::path SFXPackCell::resolveSoundPath(gd::string const& soundId) const {
+    std::filesystem::path SFXPackCell::resolveSoundPath(std::string const& soundId) const {
         auto fallback = utils::getSfxDownloadPath(soundId, makeSoundRelativeUrl(soundId));
         if (std::filesystem::exists(fallback)) {
             return fallback;

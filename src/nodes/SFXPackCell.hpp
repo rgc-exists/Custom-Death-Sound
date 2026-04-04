@@ -5,8 +5,8 @@
 namespace deathsounds {
     class SFXPackCell : public SFXCell {
     public:
-        bool init(int index, gd::string id, gd::string name, std::vector<gd::string> soundIds, int downloads, int32_t createdAt);
-        static SFXPackCell* create(int index, gd::string id, gd::string name, std::vector<gd::string> soundIds, int downloads, int32_t createdAt);
+        bool init(int index, std::string id, std::string name, std::vector<std::string> soundIds, int downloads, int32_t createdAt);
+        static SFXPackCell* create(int index, std::string id, std::string name, std::vector<std::string> soundIds, int downloads, int32_t createdAt);
 
         void validateDownloadState() override;
         void onDownloadToggle(CCObject* sender) override;
@@ -14,7 +14,7 @@ namespace deathsounds {
         void onInfoPressed(CCObject* sender) override;
 
     private:
-        std::vector<gd::string> m_soundIds;
+        std::vector<std::string> m_soundIds;
         int m_trackCount = 0;
         int m_serverDownloads = 0;
         CCLabelBMFont* m_downloadsText = nullptr;
@@ -27,9 +27,9 @@ namespace deathsounds {
         bool m_preDownloadInUse = false;
         async::TaskHolder<web::WebResponse> m_packDownloadTask;
 
-        static std::string makeSoundRelativeUrl(gd::string const& soundId);
+        static std::string makeSoundRelativeUrl(std::string const& soundId);
         static std::string formatCountCompact(int value);
-        std::filesystem::path resolveSoundPath(gd::string const& soundId) const;
+        std::filesystem::path resolveSoundPath(std::string const& soundId) const;
         void recomputePackStateFromSounds(bool forceStateUpdate = false);
         void startPackDownload();
         void cancelPackDownload();

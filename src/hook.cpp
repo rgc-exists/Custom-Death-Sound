@@ -245,7 +245,7 @@ $execute {
 }
 
 class $modify(FMODAudioEngine) {
-	int playEffect(gd::string path, float speed, float p2, float volume) {
+	int playEffect(std::string path, float speed, float p2, float volume) {
 		if (path == "explode_11.ogg") {
 			refreshSelectedOnlineSoundsIfNeeded();
 

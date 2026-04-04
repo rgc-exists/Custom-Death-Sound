@@ -431,7 +431,7 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
                 }
             }
 
-            std::vector<gd::string> tags;
+            std::vector<std::string> tags;
             if (sfxItem.contains("tags") && sfxItem["tags"].isArray()) {
                 for (auto const& tagValue : sfxItem["tags"]) {
                     if (tagValue.isString()) {
@@ -474,8 +474,8 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
 
     auto const& packs = result.contains("data") ? result["data"] : result;
 
-    auto resolvePackSoundPath = [](gd::string const& soundId) {
-        auto fallback = deathsounds::utils::getSfxDownloadPath(soundId, std::string("/sounds/") + soundId + ".wav");
+    auto resolvePackSoundPath = [](std::string const& soundId) {
+        auto fallback = deathsounds::utils::getSfxDownloadPath(soundId, std::string("/sounds/") + std::string(soundId) + ".wav");
         if (std::filesystem::exists(fallback)) {
             return fallback;
         }
@@ -522,7 +522,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
             }
 
             int trackCount = 0;
-            std::vector<gd::string> soundIds;
+            std::vector<std::string> soundIds;
             if (packItem.contains("ids")) {
                 for (auto const& idValue : packItem["ids"]) {
                     if (idValue.isString()) {
@@ -631,7 +631,7 @@ void SFXIndexPopup::showDownloadedResults() {
                 0,
                 true,
                 true,
-                std::vector<gd::string>(metadata.tags.begin(), metadata.tags.end()),
+                std::vector<std::string>(metadata.tags.begin(), metadata.tags.end()),
                 true
             );
             cell->validateDownloadState();

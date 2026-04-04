@@ -19,7 +19,7 @@ namespace deathsounds {
             return value;
         }
 
-        std::vector<gd::string> normalizeAndOrderTags(std::vector<gd::string> tags) {
+        std::vector<std::string> normalizeAndOrderTags(std::vector<std::string> tags) {
             bool hasLong = false;
             bool hasLoud = false;
 
@@ -32,7 +32,7 @@ namespace deathsounds {
                 }
             }
 
-            std::vector<gd::string> ordered;
+            std::vector<std::string> ordered;
             if (hasLong) ordered.push_back("long");
             if (hasLoud) ordered.push_back("loud");
             return ordered;
@@ -67,7 +67,7 @@ namespace deathsounds {
         int32_t createdAt,
         bool isLocal,
         bool allowPreview,
-        std::vector<gd::string> tags,
+        std::vector<std::string> tags,
         bool showTags
     ) {
         if (!CCLayer::init()) {
@@ -297,7 +297,7 @@ namespace deathsounds {
         int32_t createdAt,
         bool isLocal,
         bool allowPreview,
-        std::vector<gd::string> tags,
+        std::vector<std::string> tags,
         bool showTags
     ) {
         auto ret = new SFXCell();
