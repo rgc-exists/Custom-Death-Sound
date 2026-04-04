@@ -1,4 +1,5 @@
 # Custom Death Sound
+A more lightweight version of the [Custom Death Sound](mod:rgc_exists.death_sfx_changer). mod. This is the original version of the mod.  
 A mod for changing the death sound effect (AND level complete sound), but with extra features.
 
 # Features
