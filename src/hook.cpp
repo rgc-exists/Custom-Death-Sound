@@ -131,6 +131,16 @@ std::filesystem::path transcodeLoadedSoundIfNeeded(std::filesystem::path const& 
 	return deathsounds::utils::ensurePlayableSfxPath(originalPath);
 }
 
+bool pathMatchesCue(gd::string const& path, std::string_view cue) {
+	auto pathString = std::string(path);
+	if (pathString.find(cue) != std::string::npos) {
+		return true;
+	}
+
+	auto filename = std::filesystem::path(pathString).filename().string();
+	return filename == cue || filename.find(cue) != std::string::npos;
+}
+
 void seedSoundRngFromUnixMs() {
 	auto now = std::chrono::system_clock::now();
 	auto unixMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
@@ -245,8 +255,12 @@ $execute {
 }
 
 class $modify(FMODAudioEngine) {
-	int playEffect(std::string path, float speed, float p2, float volume) {
-		if (path == "explode_11.ogg") {
+	int playEffect(gd::string path, float speed, float p2, float volume) {
+		if (pathMatchesCue(path, "explode_11.ogg") || pathMatchesCue(path, "endStart_02.ogg")) {
+			log::info("playEffect hook hit for {}", std::string(path));
+		}
+
+		if (pathMatchesCue(path, "explode_11.ogg")) {
 			refreshSelectedOnlineSoundsIfNeeded();
 
 			if (deathSoundEnabled && !selectedOnlineSounds.empty()) {
@@ -279,7 +293,7 @@ class $modify(FMODAudioEngine) {
 
 				return 1;
 			}
-		} else if (path == "endStart_02.ogg") {
+		} else if (pathMatchesCue(path, "endStart_02.ogg")) {
 			log::info("Level complete sound triggered! enabled={}, sound exists={}", levelCompleteEnabled, levelCompleteSound != nullptr);
 			if (levelCompleteEnabled) {
 				if (levelCompleteSound != nullptr) {

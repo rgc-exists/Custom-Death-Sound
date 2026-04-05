@@ -2,8 +2,6 @@
 
 A mod for changing the death sound effect (AND level complete sound), but with extra features.
 
-> This is the new **v2** version of this mod. To download the original (**Lite**) version, click [here](mod:rgc_exists.death_sfx_changer_lite).
-
 ## Features
 
 - A custom death sound (file types: .ogg, .wav, .mp3, .flac)
