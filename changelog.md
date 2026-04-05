@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.0.0-beta.2
+
+- Fixed bug on Android (and maybe other devices) where custom sounds wouldn't play
+- Removed all text from the mod which may involve the old Lite
+
 ## v2.0.0-beta.1
 
 Credits to OmgRod for this MASSIVE update!
