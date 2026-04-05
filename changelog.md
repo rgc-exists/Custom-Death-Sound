@@ -3,7 +3,7 @@
 ## v2.0.0-beta.2
 
 - Fixed bug on Android (and maybe other devices) where custom sounds wouldn't play
-- Removed all text from the mod which may involve the old Lite
+- Removed all text from the mod which may involve the old Lite version of the mod
 
 ## v2.0.0-beta.1
 
