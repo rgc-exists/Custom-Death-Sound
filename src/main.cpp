@@ -1,7 +1,3 @@
-/*
-NOTE TO INDEX MODS CHECKING THIS CODE: This repository's main branch is currently showing an UNFINISHED "update" to the mod. There's a good chance it'll never get completed, but it's too late to undo it, so please go to the [original-mod branch](https://github.com/rgc-exists/Custom-Death-Sound/tree/original-mod) to see the version that is currently submitted to Geode.
-*/
-
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 #include "nodes/SFXIndexPopup.hpp"
@@ -307,25 +303,27 @@ class $modify(FMODAudioEngine) {
 
 				float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
 				float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
-				float pitch = speed;
 				if (maxPitch > minPitch) {
 					std::uniform_real_distribution<float> pitchDist(minPitch, maxPitch);
-					pitch = pitchDist(soundRng);
+					speed = pitchDist(soundRng);
 				} else {
-					pitch = minPitch;
+					speed = minPitch;
 				}
 
-				float customVolume = Mod::get()->getSettingValue<double>("volume");
+				float volume = Mod::get()->getSettingValue<double>("volume");
 
-				FMOD_RESULT result = m_system->playSound(sound, nullptr, false, &playingChannel);
-				if (result == FMOD_OK && playingChannel) {
-					playingChannel->setVolume(customVolume * getEffectsVolume());
-					playingChannel->setPitch(pitch);
-				} else {
-					log::error("playSound returned error!");
+				if (!Mod::get()->getSettingValue<bool>("clear-on-reset")) {
+					FMOD_RESULT result = m_system->playSound(sound, nullptr, false, &playingChannel);
+					if (result == FMOD_OK && playingChannel) {
+						playingChannel->setVolume(volume * getEffectsVolume());
+						playingChannel->setPitch(speed);
+					}
+					else {
+						log::error("playSound returned error!");
+					}
+
+					return 1;
 				}
-
-				return 1;
 			}
 		} else if (pathMatchesCue(path, "endStart_02.ogg")) {
 			log::info("Level complete sound triggered! enabled={}, sound exists={}", levelCompleteEnabled, levelCompleteSound != nullptr);

@@ -50,6 +50,11 @@
 				"input": true
 			}
 		},
+		"clear-on-reset": {
+			"type": "bool",
+			"name": "Stop Sound On Reset",
+			"default": true
+		},
 		"pitch-randomization-title": {
 			"type": "title",
 			"name": "Pitch Randomization",
