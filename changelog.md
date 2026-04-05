@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.0-beta.3
+
+- Add back the "clear on reset" setting
+
 ## v2.0.0-beta.2
 
 - Fixed bug on Android (and maybe other devices) where custom sounds wouldn't play
