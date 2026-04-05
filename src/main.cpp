@@ -303,26 +303,30 @@ class $modify(FMODAudioEngine) {
 
 				float minPitch = Mod::get()->getSettingValue<double>("pitch-minimum");
 				float maxPitch = Mod::get()->getSettingValue<double>("pitch-maximum");
+				float pitch = speed;
 				if (maxPitch > minPitch) {
 					std::uniform_real_distribution<float> pitchDist(minPitch, maxPitch);
-					speed = pitchDist(soundRng);
+					pitch = pitchDist(soundRng);
 				} else {
-					speed = minPitch;
+					pitch = minPitch;
 				}
 
-				float volume = Mod::get()->getSettingValue<double>("volume");
+				float customVolume = Mod::get()->getSettingValue<double>("volume");
 
 				if (!Mod::get()->getSettingValue<bool>("clear-on-reset")) {
 					FMOD_RESULT result = m_system->playSound(sound, nullptr, false, &playingChannel);
 					if (result == FMOD_OK && playingChannel) {
-						playingChannel->setVolume(volume * getEffectsVolume());
-						playingChannel->setPitch(speed);
+						playingChannel->setVolume(customVolume * getEffectsVolume());
+						playingChannel->setPitch(pitch);
 					}
 					else {
 						log::error("playSound returned error!");
 					}
 
 					return 1;
+				}
+				else {
+					return FMODAudioEngine::playEffect(it->first, pitch, p2, customVolume);
 				}
 			}
 		} else if (pathMatchesCue(path, "endStart_02.ogg")) {
