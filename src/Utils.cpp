@@ -21,9 +21,9 @@ namespace deathsounds::utils {
             std::error_code ec;
             auto absolute = std::filesystem::absolute(path, ec);
             if (ec) {
-                return path.lexically_normal().string();
+                return geode::utils::string::pathToString(path.lexically_normal());
             }
-            return absolute.lexically_normal().string();
+            return geode::utils::string::pathToString(absolute.lexically_normal());
         }
 
         std::string lowerCopy(std::string value) {
@@ -34,7 +34,7 @@ namespace deathsounds::utils {
         }
 
         bool isWavPath(std::filesystem::path const& path) {
-            return lowerCopy(path.extension().string()) == ".wav";
+            return lowerCopy(geode::utils::string::pathToString(path.extension())) == ".wav";
         }
 
         uint16_t readU16LE(std::vector<uint8_t> const& bytes, size_t offset) {
@@ -210,7 +210,7 @@ namespace deathsounds::utils {
             return candidatePath;
         }
 
-        auto stem = std::filesystem::path(filename).stem().string();
+        auto stem = geode::utils::string::pathToString(std::filesystem::path(filename).stem());
         static constexpr std::array<const char*, 4> extensions = { ".wav", ".mp3", ".ogg", ".flac" };
         for (auto const* ext : extensions) {
             auto altPath = downloadsDir / (stem + ext);
@@ -249,9 +249,10 @@ namespace deathsounds::utils {
 
     DownloadedSfxMetadata getDownloadedSfxMetadata(std::filesystem::path const& soundPath) {
         DownloadedSfxMetadata metadata;
-        metadata.id = soundPath.stem().string();
-        metadata.name = soundPath.stem().string();
-        metadata.path = std::filesystem::absolute(soundPath).string();
+        metadata.id = geode::utils::string::pathToString(soundPath.stem());
+        metadata.name = geode::utils::string::pathToString(soundPath.stem());
+        metadata.url = std::string("/sounds/") + geode::utils::string::pathToString(soundPath.filename());
+        metadata.path = geode::utils::string::pathToString(std::filesystem::absolute(soundPath));
 
         auto metadataPath = getSfxMetadataPath(soundPath);
         if (!std::filesystem::exists(metadataPath)) {
@@ -276,8 +277,26 @@ namespace deathsounds::utils {
         if (value.contains("name")) {
             metadata.name = value["name"].asString().unwrap();
         }
+        if (value.contains("url")) {
+            metadata.url = value["url"].asString().unwrapOr(metadata.url);
+        }
         if (value.contains("path")) {
             metadata.path = value["path"].asString().unwrap();
+        }
+        if (value.contains("downloads")) {
+            metadata.downloads = value["downloads"].asInt().unwrapOr(0);
+        }
+        if (value.contains("likes")) {
+            metadata.likes = value["likes"].asInt().unwrapOr(0);
+        }
+        if (value.contains("dislikes")) {
+            metadata.dislikes = value["dislikes"].asInt().unwrapOr(0);
+        }
+        if (value.contains("createdAt")) {
+            metadata.createdAt = static_cast<int32_t>(value["createdAt"].asInt().unwrapOr(0));
+        }
+        if (value.contains("lengthSeconds")) {
+            metadata.lengthSeconds = value["lengthSeconds"].asDouble().unwrapOr(-1.0);
         }
         if (value.contains("tags") && value["tags"].isArray()) {
             for (auto const& tagValue : value["tags"]) {
@@ -294,24 +313,29 @@ namespace deathsounds::utils {
         std::filesystem::path const& soundPath,
         std::string const& sfxId,
         std::string const& sfxName,
-        std::vector<std::string> const& tags
+        std::vector<std::string> const& tags,
+        matjson::Value const& sfxObject
     ) {
         std::error_code ec;
         std::filesystem::create_directories(soundPath.parent_path(), ec);
 
         auto metadataPath = getSfxMetadataPath(soundPath);
-        matjson::Value value = matjson::Value::object();
-        value["id"] = sfxId;
-        value["name"] = sfxName;
-        value["path"] = std::filesystem::absolute(soundPath).string();
-        value["tags"] = matjson::Value::array();
-        for (auto const& tag : tags) {
-            value["tags"].push(tag);
+        matjson::Value value = sfxObject.isObject() ? sfxObject : matjson::Value::object();
+        value["id"] = value.contains("id") ? value["id"] : matjson::Value(sfxId);
+        value["name"] = value.contains("name") ? value["name"] : matjson::Value(sfxName);
+        value["url"] = value.contains("url") ? value["url"] : matjson::Value(std::string("/sounds/") + geode::utils::string::pathToString(soundPath.filename()));
+        value["path"] = geode::utils::string::pathToString(std::filesystem::absolute(soundPath));
+
+        if (!value.contains("tags") || !value["tags"].isArray()) {
+            value["tags"] = matjson::Value::array();
+            for (auto const& tag : tags) {
+                value["tags"].push(tag);
+            }
         }
 
         std::ofstream out(metadataPath, std::ios::binary | std::ios::trunc);
         if (!out) {
-            log::warn("Failed to write SFX metadata file at {}", metadataPath.string());
+            log::warn("Failed to write SFX metadata file at {}", geode::utils::string::pathToString(metadataPath));
             return;
         }
 
@@ -396,7 +420,7 @@ namespace deathsounds::utils {
 
         if (!std::filesystem::exists(originalPath)) {
             auto absPath = std::filesystem::absolute(originalPath);
-            log::warn("[SFX Preview] File missing for '{}' ({}) at {}:1", sfxName, sfxId, absPath.string());
+            log::warn("[SFX Preview] File missing for '{}' ({}) at {}:1", sfxName, sfxId, geode::utils::string::pathToString(absPath));
             return false;
         }
 
@@ -405,37 +429,41 @@ namespace deathsounds::utils {
         auto soundPath = ensurePlayableSfxPath(originalPath);
 
         auto absSoundPath = std::filesystem::absolute(soundPath);
-        FMOD_RESULT createResult = fmod->m_system->createSound(soundPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+        auto soundPathString = geode::utils::string::pathToString(soundPath);
+        FMOD_RESULT createResult = fmod->m_system->createSound(soundPathString.c_str(), FMOD_DEFAULT, nullptr, &state.sound);
 
         if (createResult != FMOD_OK && soundPath != originalPath) {
             state.sound = nullptr;
             soundPath = originalPath;
             absSoundPath = std::filesystem::absolute(soundPath);
-            createResult = fmod->m_system->createSound(soundPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+            soundPathString = geode::utils::string::pathToString(soundPath);
+            createResult = fmod->m_system->createSound(soundPathString.c_str(), FMOD_DEFAULT, nullptr, &state.sound);
         }
 
         if (createResult != FMOD_OK && soundPath == originalPath) {
             auto convertedPath = originalPath;
             convertedPath += ".16.wav";
             if (ensurePcm16WavFromAnyAudio(originalPath, convertedPath)) {
-                log::info("[SFX Preview] Converted audio for '{}' ({}) -> {}:1", sfxName, sfxId, std::filesystem::absolute(convertedPath).string());
-                createResult = fmod->m_system->createSound(convertedPath.string().c_str(), FMOD_DEFAULT, nullptr, &state.sound);
+                log::info("[SFX Preview] Converted audio for '{}' ({}) -> {}:1", sfxName, sfxId, geode::utils::string::pathToString(std::filesystem::absolute(convertedPath)));
+                auto convertedPathString = geode::utils::string::pathToString(convertedPath);
+                createResult = fmod->m_system->createSound(convertedPathString.c_str(), FMOD_DEFAULT, nullptr, &state.sound);
                 if (createResult == FMOD_OK) {
                     soundPath = convertedPath;
                     absSoundPath = std::filesystem::absolute(soundPath);
+                    soundPathString = convertedPathString;
                 }
             }
         }
 
         if (createResult != FMOD_OK) {
-            log::error("[SFX Preview] createSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(createResult), absSoundPath.string());
+            log::error("[SFX Preview] createSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(createResult), geode::utils::string::pathToString(absSoundPath));
             state.sound = nullptr;
             return false;
         }
 
         FMOD_RESULT playResult = fmod->m_system->playSound(state.sound, nullptr, false, &state.channel);
         if (playResult != FMOD_OK) {
-            log::error("[SFX Preview] playSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(playResult), absSoundPath.string());
+            log::error("[SFX Preview] playSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(playResult), geode::utils::string::pathToString(absSoundPath));
             state.sound->release();
             state.sound = nullptr;
             state.channel = nullptr;
@@ -443,7 +471,7 @@ namespace deathsounds::utils {
         }
 
         state.playing = true;
-        log::info("[SFX Preview] Playing '{}' ({}) from {}:1", sfxName, sfxId, absSoundPath.string());
+        log::info("[SFX Preview] Playing '{}' ({}) from {}:1", sfxName, sfxId, geode::utils::string::pathToString(absSoundPath));
         return true;
     }
 

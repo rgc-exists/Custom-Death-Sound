@@ -450,7 +450,9 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
                 false,
                 true,
                 tags,
-                true
+                true,
+                sfxItem.contains("lengthSeconds") ? sfxItem["lengthSeconds"].asDouble().unwrapOr(-1.0) : -1.0,
+                sfxItem
             );
             cell->validateDownloadState();
             widgets.list->m_contentLayer->addChild(cell);
@@ -491,12 +493,12 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
             }
 
             auto path = entry.path();
-            auto ext = path.extension().string();
+                auto ext = geode::utils::string::pathToString(path.extension());
             if (ext != ".wav" && ext != ".ogg" && ext != ".mp3") {
                 continue;
             }
 
-            if (path.filename().string().ends_with(".16.wav")) {
+                if (geode::utils::string::pathToString(path.filename()).ends_with(".16.wav")) {
                 continue;
             }
 
@@ -586,12 +588,12 @@ void SFXIndexPopup::showDownloadedResults() {
         }
 
         auto path = entry.path();
-        auto ext = path.extension().string();
+            auto ext = geode::utils::string::pathToString(path.extension());
         if (ext != ".wav" && ext != ".ogg" && ext != ".mp3") {
             continue;
         }
 
-        if (path.filename().string().ends_with(".16.wav")) {
+            if (geode::utils::string::pathToString(path.filename()).ends_with(".16.wav")) {
             continue;
         }
 
@@ -599,7 +601,7 @@ void SFXIndexPopup::showDownloadedResults() {
     }
 
     std::sort(downloadedFiles.begin(), downloadedFiles.end(), [](auto const& a, auto const& b) {
-        return a.filename().string() < b.filename().string();
+            return geode::utils::string::pathToString(a.filename()) < geode::utils::string::pathToString(b.filename());
     });
 
     bool hasRows = !downloadedFiles.empty();
@@ -617,22 +619,23 @@ void SFXIndexPopup::showDownloadedResults() {
             auto metadata = deathsounds::utils::getDownloadedSfxMetadata(path);
             auto metadataPath = deathsounds::utils::getSfxMetadataPath(path);
             if (!std::filesystem::exists(metadataPath)) {
-                auto fallbackName = path.filename().string();
+                    auto fallbackName = geode::utils::string::pathToString(path.filename());
                 metadata.id = fallbackName;
                 metadata.name = fallbackName;
-                metadata.path = std::filesystem::absolute(path).string();
+                    metadata.path = geode::utils::string::pathToString(std::filesystem::absolute(path));
             }
             auto cell = deathsounds::SFXCell::create(
                 index,
                 metadata.id,
                 metadata.name,
-                "/sounds/" + path.filename().string(),
+                    metadata.url.empty() ? "/sounds/" + geode::utils::string::pathToString(path.filename()) : metadata.url,
                 0,
                 0,
                 true,
                 true,
                 std::vector<std::string>(metadata.tags.begin(), metadata.tags.end()),
-                true
+                true,
+                metadata.lengthSeconds
             );
             cell->validateDownloadState();
             widgets.list->m_contentLayer->addChild(cell);
@@ -894,7 +897,7 @@ void SFXIndexPopup::openSfxFolder(CCObject*) {
     auto downloadDir = Mod::get()->getConfigDir() / "downloaded-sfx";
     std::error_code ec;
     std::filesystem::create_directories(downloadDir, ec);
-    utils::file::openFolder(downloadDir.string());
+        utils::file::openFolder(geode::utils::string::pathToString(downloadDir));
 }
 
 void SFXIndexPopup::resetToFirstPage(CCObject*) {

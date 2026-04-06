@@ -4,6 +4,7 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
 #include <Geode/modify/MenuLayer.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 #include "Utils.hpp"
 
 using namespace geode::prelude;
@@ -55,8 +56,8 @@ namespace {
 			return candidate;
 		}
 
-		auto stem = candidate.stem().string();
-		auto ext = candidate.extension().string();
+		auto stem = geode::utils::string::pathToString(candidate.stem());
+		auto ext = geode::utils::string::pathToString(candidate.extension());
 		for (int i = 1;; ++i) {
 			auto suffixed = targetDir / fmt::format("{}-{}{}", stem, i, ext);
 			if (!std::filesystem::exists(suffixed)) {
@@ -101,7 +102,7 @@ namespace {
 			return true;
 		}
 
-		auto filename = std::filesystem::path(value).filename().string();
+		auto filename = geode::utils::string::pathToString(std::filesystem::path(value).filename());
 		return filename == "explode_11.ogg";
 	}
 
@@ -167,7 +168,7 @@ bool pathMatchesCue(gd::string const& path, std::string_view cue) {
 		return true;
 	}
 
-	auto filename = std::filesystem::path(pathString).filename().string();
+	auto filename = geode::utils::string::pathToString(std::filesystem::path(pathString).filename());
 	return filename == cue || filename.find(cue) != std::string::npos;
 }
 
@@ -195,15 +196,17 @@ void reloadSelectedOnlineSounds() {
 
 		auto playablePath = path;
 		FMOD::Sound* sound = nullptr;
-		if (FMODAudioEngine::sharedEngine()->m_system->createSound(playablePath.string().c_str(), FMOD_DEFAULT, nullptr, &sound) != FMOD_OK) {
+		auto playablePathString = geode::utils::string::pathToString(playablePath);
+		if (FMODAudioEngine::sharedEngine()->m_system->createSound(playablePathString.c_str(), FMOD_DEFAULT, nullptr, &sound) != FMOD_OK) {
 			playablePath = transcodeLoadedSoundIfNeeded(path);
-			if (playablePath == path || FMODAudioEngine::sharedEngine()->m_system->createSound(playablePath.string().c_str(), FMOD_DEFAULT, nullptr, &sound) != FMOD_OK) {
+			playablePathString = geode::utils::string::pathToString(playablePath);
+			if (playablePath == path || FMODAudioEngine::sharedEngine()->m_system->createSound(playablePathString.c_str(), FMOD_DEFAULT, nullptr, &sound) != FMOD_OK) {
 				continue;
 			}
 		}
 
 		if (sound) {
-			selectedOnlineSounds[playablePath.string()] = sound;
+			selectedOnlineSounds[playablePathString] = sound;
 		}
 	}
 
@@ -236,18 +239,19 @@ $execute {
 	levelCompleteEnabled = Mod::get()->getSettingValue<bool>("level-complete-enabled");
 	auto levelCompletePath = Mod::get()->getSettingValue<std::filesystem::path>("level-complete-path");
 	log::info("Level complete enabled: {}", levelCompleteEnabled);
-	log::info("Level complete path: {}", levelCompletePath.string());
+	log::info("Level complete path: {}", geode::utils::string::pathToString(levelCompletePath));
 	if (!levelCompletePath.empty() && std::filesystem::exists(levelCompletePath)) {
-		log::info("Loading level-complete sound from: {}", levelCompletePath.string());
-		if (FMODAudioEngine::sharedEngine()->m_system->createSound(levelCompletePath.string().c_str(), FMOD_DEFAULT, nullptr, &levelCompleteSound) != FMOD_OK) {
+		log::info("Loading level-complete sound from: {}", geode::utils::string::pathToString(levelCompletePath));
+		auto levelCompletePathString = geode::utils::string::pathToString(levelCompletePath);
+		if (FMODAudioEngine::sharedEngine()->m_system->createSound(levelCompletePathString.c_str(), FMOD_DEFAULT, nullptr, &levelCompleteSound) != FMOD_OK) {
 			log::error("Failed to load level-complete sound!");
 			levelCompleteSound = nullptr;
 		} else {
 			log::info("Successfully loaded level-complete sound!");
-			levelCompleteSoundPath = levelCompletePath.string();
+			levelCompleteSoundPath = levelCompletePathString;
 		}
 	} else {
-		log::warn("Level complete path doesn't exist or is empty: {}", levelCompletePath.string());
+		log::warn("Level complete path doesn't exist or is empty: {}", geode::utils::string::pathToString(levelCompletePath));
 	}
 
 	listenForSettingChanges<bool>("death-sound-enabled", [](bool value) {
@@ -256,7 +260,7 @@ $execute {
 	});
 
 	listenForSettingChanges<std::filesystem::path>("level-complete-path", [](std::filesystem::path const& value) {
-		log::info("level-complete-path changed to: {}", value.string());
+		log::info("level-complete-path changed to: {}", geode::utils::string::pathToString(value));
 		if (levelCompleteSound) {
 			log::info("Releasing old level-complete sound");
 			levelCompleteSound->release();
@@ -265,16 +269,17 @@ $execute {
 		levelCompleteSoundPath.clear();
 
 		if (!value.empty() && std::filesystem::exists(value)) {
-			log::info("Loading new level-complete sound from: {}", value.string());
-			if (FMODAudioEngine::sharedEngine()->m_system->createSound(value.string().c_str(), FMOD_DEFAULT, nullptr, &levelCompleteSound) != FMOD_OK) {
+			log::info("Loading new level-complete sound from: {}", geode::utils::string::pathToString(value));
+			auto valueString = geode::utils::string::pathToString(value);
+			if (FMODAudioEngine::sharedEngine()->m_system->createSound(valueString.c_str(), FMOD_DEFAULT, nullptr, &levelCompleteSound) != FMOD_OK) {
 				log::error("Failed to load new level-complete sound!");
 				levelCompleteSound = nullptr;
 			} else {
 				log::info("Successfully loaded new level-complete sound!");
-				levelCompleteSoundPath = value.string();
+				levelCompleteSoundPath = valueString;
 			}
 		} else {
-			log::warn("New level-complete path doesn't exist or is empty: {}", value.string());
+			log::warn("New level-complete path doesn't exist or is empty: {}", geode::utils::string::pathToString(value));
 		}
 	});
 
@@ -388,5 +393,12 @@ class $modify(MenuLayer) {
 		}
 
 		return true;
+	}
+};
+
+class $modify(MyPlayLayer, PlayLayer) {
+	void destroyPlayer(PlayerObject* player, GameObject* object) {
+		PlayLayer::destroyPlayer(player, object);
+		
 	}
 };

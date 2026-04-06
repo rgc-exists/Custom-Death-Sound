@@ -38,6 +38,20 @@ namespace deathsounds {
             return ordered;
         }
 
+        std::string formatLengthSeconds(double lengthSeconds) {
+            auto lengthText = fmt::format("{:.2f}", lengthSeconds);
+            auto dotPos = lengthText.find('.');
+            if (dotPos != std::string::npos) {
+                while (!lengthText.empty() && lengthText.back() == '0') {
+                    lengthText.pop_back();
+                }
+                if (!lengthText.empty() && lengthText.back() == '.') {
+                    lengthText.pop_back();
+                }
+            }
+            return fmt::format("{}s", lengthText);
+        }
+
         struct TagBadgeInfo {
             const char* title;
             const char* body;
@@ -68,7 +82,9 @@ namespace deathsounds {
         bool isLocal,
         bool allowPreview,
         std::vector<std::string> tags,
-        bool showTags
+        bool showTags,
+        double lengthSeconds,
+        matjson::Value sfxObject
     ) {
         if (!CCLayer::init()) {
             return false;
@@ -79,10 +95,12 @@ namespace deathsounds {
         m_name = name;
         m_downloadCount = downloads;
         m_createdAt = createdAt;
+        m_lengthSeconds = lengthSeconds;
         m_isLocal = isLocal;
         m_allowPreview = allowPreview;
         m_showTags = showTags;
         m_tags = normalizeAndOrderTags(std::move(tags));
+        m_sfxObject = std::move(sfxObject);
         auto existingPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
         bool alreadyDownloaded = std::filesystem::exists(existingPath);
         if (alreadyDownloaded) {
@@ -298,10 +316,12 @@ namespace deathsounds {
         bool isLocal,
         bool allowPreview,
         std::vector<std::string> tags,
-        bool showTags
+        bool showTags,
+        double lengthSeconds,
+        matjson::Value sfxObject
     ) {
         auto ret = new SFXCell();
-        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview, std::move(tags), showTags)) {
+        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview, std::move(tags), showTags, lengthSeconds, std::move(sfxObject))) {
             ret->autorelease();
             return ret;
         }
@@ -342,7 +362,7 @@ namespace deathsounds {
             return;
         }
 
-        log::info("[SFX Download] Starting '{}' ({}) -> {}:1", m_name, m_sfxId, absPath.string());
+            log::info("[SFX Download] Starting '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
 
         std::error_code ec;
         std::filesystem::create_directories(outPath.parent_path(), ec);
@@ -361,7 +381,7 @@ namespace deathsounds {
             [this, outPath](web::WebResponse value) {
                 auto absPath = std::filesystem::absolute(outPath);
                 if (!value.ok()) {
-                    log::error("[SFX Download] Failed '{}' ({}) HTTP {} -> {}:1", m_name, m_sfxId, value.code(), absPath.string());
+                        log::error("[SFX Download] Failed '{}' ({}) HTTP {} -> {}:1", m_name, m_sfxId, value.code(), geode::utils::string::pathToString(absPath));
                     m_downloadState = DownloadState::NotDownloaded;
                     refreshActionButtons();
                     return;
@@ -369,13 +389,13 @@ namespace deathsounds {
 
                 auto writeResult = value.into(outPath);
                 if (!writeResult.isOk()) {
-                    log::error("[SFX Download] Failed saving '{}' ({}) -> {}:1", m_name, m_sfxId, absPath.string());
+                        log::error("[SFX Download] Failed saving '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
                     m_downloadState = DownloadState::NotDownloaded;
                     refreshActionButtons();
                     return;
                 }
 
-                log::info("[SFX Download] Completed '{}' ({}) -> {}:1", m_name, m_sfxId, absPath.string());
+                    log::info("[SFX Download] Completed '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
 
                 finishDownload();
             }
@@ -386,7 +406,7 @@ namespace deathsounds {
         m_downloadTask.cancel();
 
         auto absPath = std::filesystem::absolute(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl));
-        log::info("[SFX Download] Canceled '{}' ({}) -> {}:1", m_name, m_sfxId, absPath.string());
+            log::info("[SFX Download] Canceled '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
 
         stopPreview();
 
@@ -403,14 +423,29 @@ namespace deathsounds {
         for (auto const& tag : m_tags) {
             metadataTags.push_back(static_cast<std::string>(tag));
         }
-        utils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name, metadataTags);
+        matjson::Value metadataObject = m_sfxObject.isObject() ? m_sfxObject : matjson::Value::object();
+        metadataObject["id"] = m_sfxId;
+        metadataObject["name"] = m_name;
+        metadataObject["url"] = m_sfxUrl;
+        metadataObject["downloads"] = m_downloadCount;
+        metadataObject["createdAt"] = m_createdAt;
+        if (m_lengthSeconds >= 0.0) {
+            metadataObject["lengthSeconds"] = m_lengthSeconds;
+        }
+        if (!metadataObject.contains("tags") || !metadataObject["tags"].isArray()) {
+            metadataObject["tags"] = matjson::Value::array();
+            for (auto const& tag : m_tags) {
+                metadataObject["tags"].push(tag);
+            }
+        }
+        utils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name, metadataTags, metadataObject);
         m_downloadState = DownloadState::Downloaded;
         m_inUse = false;
         s_downloadedSfx.insert(m_sfxId);
         utils::setOnlineSfxPathUsed(downloadPath, false);
         deathsounds::DSRequest::get()->incrementSFXDownload(m_sfxId);
         auto absPath = std::filesystem::absolute(downloadPath);
-        log::info("[SFX Download] Ready for use '{}' ({}) at {}:1", m_name, m_sfxId, absPath.string());
+            log::info("[SFX Download] Ready for use '{}' ({}) at {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
         refreshActionButtons();
     }
 
@@ -455,10 +490,13 @@ namespace deathsounds {
     void SFXCell::onInfoPressed(CCObject*) {
         auto uploadedText = m_isLocal ? std::string("Unknown") : deathsounds::utils::formatDate(m_createdAt);
         auto downloadsText = m_isLocal ? std::string("Unknown") : fmt::to_string(m_downloadCount);
+        auto soundLengthLine = m_lengthSeconds >= 0.0
+            ? fmt::format("\n<cl>Sound Length:</c> {}", formatLengthSeconds(m_lengthSeconds))
+            : std::string();
         createQuickPopup(
             m_name.c_str(),
-            fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}",
-                m_name, uploadedText, downloadsText),
+            fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}{}",
+                m_name, uploadedText, downloadsText, soundLengthLine),
             "OK", "Delete",
             [this](FLAlertLayer*, bool btn2) {
                 if (!btn2) {

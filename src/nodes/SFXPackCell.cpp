@@ -225,12 +225,12 @@ namespace deathsounds {
             }
 
             auto path = entry.path();
-            auto ext = path.extension().string();
+                auto ext = geode::utils::string::pathToString(path.extension());
             if (ext != ".wav" && ext != ".ogg" && ext != ".mp3") {
                 continue;
             }
 
-            if (path.filename().string().ends_with(".16.wav")) {
+                if (geode::utils::string::pathToString(path.filename()).ends_with(".16.wav")) {
                 continue;
             }
 

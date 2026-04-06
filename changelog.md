@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.0.0-beta.4
+
+- Add SFX length
+- Add "Delay Death" setting
+- Updated some internal stuff to hopefully get the mod accepted
+
 ## v2.0.0-beta.3
 
 - Add back the "clear on reset" setting

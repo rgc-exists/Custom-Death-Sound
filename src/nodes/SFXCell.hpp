@@ -19,7 +19,9 @@ namespace deathsounds {
             bool isLocal = false,
             bool allowPreview = true,
             std::vector<std::string> tags = {},
-            bool showTags = true
+            bool showTags = true,
+            double lengthSeconds = -1.0,
+            matjson::Value sfxObject = matjson::Value()
         );
         static SFXCell* create(
             int index,
@@ -31,7 +33,9 @@ namespace deathsounds {
             bool isLocal = false,
             bool allowPreview = true,
             std::vector<std::string> tags = {},
-            bool showTags = true
+            bool showTags = true,
+            double lengthSeconds = -1.0,
+            matjson::Value sfxObject = matjson::Value()
         );
         void onExit() override;
         virtual void validateDownloadState();
@@ -63,12 +67,14 @@ namespace deathsounds {
         std::string m_name;
         int m_downloadCount = 0;
         int32_t m_createdAt = 0;
+        double m_lengthSeconds = -1.0;
         bool m_isLocal = false;
         bool m_allowPreview = true;
         bool m_showTags = true;
         bool m_previewPlaying = false;
         bool m_inUse = false;
         std::vector<std::string> m_tags;
+        matjson::Value m_sfxObject;
         DownloadState m_downloadState = DownloadState::NotDownloaded;
 
         CCMenu* m_menu = nullptr;
