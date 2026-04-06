@@ -12,9 +12,14 @@ using namespace geode::prelude;
 FMOD::Channel* playingChannel = nullptr;
 std::map<std::string, FMOD::Sound*> selectedOnlineSounds;
 std::vector<std::string> selectedOnlineSoundPaths;
+float pendingDeathDelaySeconds = -1.f;
+bool pendingDeathDelayReady = false;
+bool pendingResetFromDeathSound = false;
 
 bool deathSoundEnabled = true;
 bool levelCompleteEnabled = false;
+
+constexpr float kDelayDeathSafetyBuffer = 0.15f;
 
 FMOD::Sound* levelCompleteSound = nullptr;
 std::string levelCompleteSoundPath;
@@ -296,13 +301,17 @@ class $modify(FMODAudioEngine) {
 		}
 
 		if (pathMatchesCue(path, "explode_11.ogg")) {
+			log::info("explode cue detected: deathEnabled={}, selectedPoolBeforeRefresh={}", deathSoundEnabled, selectedOnlineSounds.size());
 			refreshSelectedOnlineSoundsIfNeeded();
+			log::info("selectedPoolAfterRefresh={}", selectedOnlineSounds.size());
 
 			if (deathSoundEnabled && !selectedOnlineSounds.empty()) {
 				std::uniform_int_distribution<size_t> soundDist(0, selectedOnlineSounds.size() - 1);
 
 				auto it = selectedOnlineSounds.begin();
-				std::advance(it, soundDist(soundRng));
+				auto randomIndex = soundDist(soundRng);
+				std::advance(it, randomIndex);
+				log::info("selectedSound index={} key='{}'", randomIndex, it->first);
 
 				FMOD::Sound* sound = it->second;
 
@@ -315,24 +324,71 @@ class $modify(FMODAudioEngine) {
 				} else {
 					pitch = minPitch;
 				}
+				log::info("pitch: speed={}, min={}, max={}, chosen={}", speed, minPitch, maxPitch, pitch);
 
 				float customVolume = Mod::get()->getSettingValue<double>("volume");
+				bool delayDeathEnabled = Mod::get()->getSettingValue<bool>("delay-death");
+				bool clearOnResetEnabled = Mod::get()->getSettingValue<bool>("clear-on-reset");
+				log::info("settings: delayDeath={}, clearOnReset={}, customVolume={}", delayDeathEnabled, clearOnResetEnabled, customVolume);
+				pendingDeathDelayReady = false;
+				pendingDeathDelaySeconds = -1.f;
+				unsigned int soundLengthMs = 0;
+				if (sound && sound->getLength(&soundLengthMs, FMOD_TIMEUNIT_MS) == FMOD_OK) {
+					float pitchForDelay = std::max(pitch, 0.01f);
+					pendingDeathDelaySeconds = static_cast<float>(soundLengthMs) / 1000.f / pitchForDelay;
+					pendingDeathDelayReady = true;
+					log::info("computed delay: lengthMs={}, pitchForDelay={}, delaySeconds={}", soundLengthMs, pitchForDelay, pendingDeathDelaySeconds);
+				} else {
+					log::warn("failed to get sound length, delay not ready");
+				}
 
-				if (!Mod::get()->getSettingValue<bool>("clear-on-reset")) {
+				if (delayDeathEnabled) {
+					log::info("using manual playback path for delay-death");
 					FMOD_RESULT result = m_system->playSound(sound, nullptr, false, &playingChannel);
 					if (result == FMOD_OK && playingChannel) {
 						playingChannel->setVolume(customVolume * getEffectsVolume());
 						playingChannel->setPitch(pitch);
+						pendingResetFromDeathSound = true;
+						log::info("manual playSound success, channel={}, effectsVolume={}", static_cast<void*>(playingChannel), getEffectsVolume());
+					} else {
+						log::error("manual playSound failed: result={}", static_cast<int>(result));
+						pendingDeathDelayReady = false;
+						pendingResetFromDeathSound = false;
+					}
+
+					return 1;
+				}
+
+				if (!clearOnResetEnabled) {
+					log::info("using manual playback path because clear-on-reset is OFF");
+					FMOD_RESULT result = m_system->playSound(sound, nullptr, false, &playingChannel);
+					if (result == FMOD_OK && playingChannel) {
+						playingChannel->setVolume(customVolume * getEffectsVolume());
+						playingChannel->setPitch(pitch);
+						pendingResetFromDeathSound = false;
+						if (!delayDeathEnabled) {
+							pendingDeathDelayReady = false;
+						}
+						log::info("manual playSound success (clear-on-reset OFF), channel={}", static_cast<void*>(playingChannel));
 					}
 					else {
-						log::error("playSound returned error!");
+						log::error("manual playSound failed (clear-on-reset OFF): result={}", static_cast<int>(result));
+						pendingDeathDelayReady = false;
+						pendingResetFromDeathSound = false;
 					}
 
 					return 1;
 				}
 				else {
+					log::info("delegating to base playEffect path='{}' pitch={} volume={}", it->first, pitch, customVolume);
+					pendingResetFromDeathSound = false;
+					if (!delayDeathEnabled) {
+						pendingDeathDelayReady = false;
+					}
 					return FMODAudioEngine::playEffect(it->first, pitch, p2, customVolume);
 				}
+			} else {
+				log::info("skipping custom death sound: enabled={}, poolEmpty={}", deathSoundEnabled, selectedOnlineSounds.empty());
 			}
 		} else if (pathMatchesCue(path, "endStart_02.ogg")) {
 			log::info("Level complete sound triggered! enabled={}, sound exists={}", levelCompleteEnabled, levelCompleteSound != nullptr);
@@ -397,8 +453,168 @@ class $modify(MenuLayer) {
 };
 
 class $modify(MyPlayLayer, PlayLayer) {
+	struct Fields {
+		bool m_delayDeathBypassOnce = false;
+		bool m_delayDeathScheduled = false;
+		bool m_delayResetBypassOnce = false;
+		bool m_delayResetScheduled = false;
+		PlayerObject* m_delayDeathPlayer = nullptr;
+		GameObject* m_delayDeathObject = nullptr;
+	};
+
+	void clearDelayedDeathState(bool stopSound) {
+		log::info("clearDelayedDeathState(stopSound={}) scheduled={} player={} object={} pendingReady={} pendingSeconds={} channel={}",
+			stopSound,
+			m_fields->m_delayDeathScheduled,
+			static_cast<void*>(m_fields->m_delayDeathPlayer),
+			static_cast<void*>(m_fields->m_delayDeathObject),
+			pendingDeathDelayReady,
+			pendingDeathDelaySeconds,
+			static_cast<void*>(playingChannel)
+		);
+		this->unschedule(schedule_selector(MyPlayLayer::runDelayedDeath));
+		this->unschedule(schedule_selector(MyPlayLayer::runDelayedReset));
+		m_fields->m_delayDeathScheduled = false;
+		m_fields->m_delayResetScheduled = false;
+		m_fields->m_delayDeathPlayer = nullptr;
+		m_fields->m_delayDeathObject = nullptr;
+		pendingDeathDelayReady = false;
+		pendingDeathDelaySeconds = -1.f;
+		pendingResetFromDeathSound = false;
+
+		if (stopSound && playingChannel) {
+			log::info("stopping playing channel on reset/cleanup: {}", static_cast<void*>(playingChannel));
+			playingChannel->stop();
+			playingChannel = nullptr;
+		}
+	}
+	
+	void runDelayedDeath(float) {
+		log::info("runDelayedDeath fired: scheduled={} player={} object={}",
+			m_fields->m_delayDeathScheduled,
+			static_cast<void*>(m_fields->m_delayDeathPlayer),
+			static_cast<void*>(m_fields->m_delayDeathObject)
+		);
+		if (!m_fields->m_delayDeathScheduled || !m_fields->m_delayDeathPlayer) {
+			log::warn("runDelayedDeath aborted: invalid pending state");
+			return;
+		}
+
+		m_fields->m_delayDeathScheduled = false;
+		m_fields->m_delayDeathBypassOnce = true;
+		this->unschedule(schedule_selector(MyPlayLayer::runDelayedDeath));
+		log::info("invoking delayed PlayLayer::destroyPlayer player={} object={}", static_cast<void*>(m_fields->m_delayDeathPlayer), static_cast<void*>(m_fields->m_delayDeathObject));
+		PlayLayer::destroyPlayer(m_fields->m_delayDeathPlayer, m_fields->m_delayDeathObject);
+		m_fields->m_delayDeathBypassOnce = false;
+		m_fields->m_delayDeathPlayer = nullptr;
+		m_fields->m_delayDeathObject = nullptr;
+	}
+
+	void runDelayedReset(float) {
+		log::info("runDelayedReset fired: scheduled={} pendingReset={} channel={}",
+			m_fields->m_delayResetScheduled,
+			pendingResetFromDeathSound,
+			static_cast<void*>(playingChannel)
+		);
+
+		if (!m_fields->m_delayResetScheduled) {
+			return;
+		}
+
+		if (playingChannel) {
+			bool isPlaying = false;
+			auto result = playingChannel->isPlaying(&isPlaying);
+			if (result == FMOD_OK && isPlaying) {
+				this->unschedule(schedule_selector(MyPlayLayer::runDelayedReset));
+				this->schedule(schedule_selector(MyPlayLayer::runDelayedReset), 0.05f);
+				log::info("runDelayedReset waiting: channel still playing");
+				return;
+			}
+			log::info("runDelayedReset channel finished: result={} isPlaying={}", static_cast<int>(result), isPlaying);
+		}
+
+		m_fields->m_delayResetScheduled = false;
+		this->unschedule(schedule_selector(MyPlayLayer::runDelayedReset));
+		m_fields->m_delayResetBypassOnce = true;
+		pendingResetFromDeathSound = false;
+		pendingDeathDelayReady = false;
+		pendingDeathDelaySeconds = -1.f;
+		log::info("invoking delayed PlayLayer::resetLevel now");
+		PlayLayer::resetLevel();
+		m_fields->m_delayResetBypassOnce = false;
+	}
+
+	void resetLevel() {
+		bool clearOnResetEnabled = Mod::get()->getSettingValue<bool>("clear-on-reset");
+		bool delayDeathEnabled = Mod::get()->getSettingValue<bool>("delay-death");
+		log::info("resetLevel called: clearOnReset={} delayDeath={} scheduled={} channel={}",
+			clearOnResetEnabled,
+			delayDeathEnabled,
+			m_fields->m_delayDeathScheduled,
+			static_cast<void*>(playingChannel)
+		);
+
+		if (m_fields->m_delayResetBypassOnce) {
+			log::info("resetLevel bypass path: executing base reset");
+			PlayLayer::resetLevel();
+			return;
+		}
+
+		if (delayDeathEnabled && pendingResetFromDeathSound) {
+			if (!m_fields->m_delayResetScheduled) {
+				m_fields->m_delayResetScheduled = true;
+				this->unschedule(schedule_selector(MyPlayLayer::runDelayedReset));
+				this->schedule(schedule_selector(MyPlayLayer::runDelayedReset), 0.05f);
+				log::info("deferring resetLevel until death sound finishes");
+			} else {
+				log::info("reset already deferred, skipping immediate base reset");
+			}
+			return;
+		}
+
+		if (clearOnResetEnabled) {
+			clearDelayedDeathState(true);
+		} else {
+			clearDelayedDeathState(false);
+		}
+		PlayLayer::resetLevel();
+	}
+
+	void onExit() {
+		log::info("onExit called, clearing delayed death state");
+		clearDelayedDeathState(false);
+		PlayLayer::onExit();
+	}
+
 	void destroyPlayer(PlayerObject* player, GameObject* object) {
+		log::info("destroyPlayer intercepted: bypassOnce={} delayDeath={} pendingReady={} pendingSeconds={} player={} object={}",
+			m_fields->m_delayDeathBypassOnce,
+			Mod::get()->getSettingValue<bool>("delay-death"),
+			pendingDeathDelayReady,
+			pendingDeathDelaySeconds,
+			static_cast<void*>(player),
+			static_cast<void*>(object)
+		);
+		if (m_fields->m_delayDeathBypassOnce) {
+			log::info("bypass path: calling PlayLayer::destroyPlayer immediately");
+			PlayLayer::destroyPlayer(player, object);
+			return;
+		}
+
+		if (Mod::get()->getSettingValue<bool>("delay-death") && pendingDeathDelayReady && pendingDeathDelaySeconds >= 0.f) {
+			m_fields->m_delayDeathPlayer = player;
+			m_fields->m_delayDeathObject = object;
+			m_fields->m_delayDeathScheduled = true;
+			this->unschedule(schedule_selector(MyPlayLayer::runDelayedDeath));
+			auto scheduledDelay = pendingDeathDelaySeconds + kDelayDeathSafetyBuffer;
+			log::info("scheduling delayed destroyPlayer in {}s (base={}s, buffer={}s)", scheduledDelay, pendingDeathDelaySeconds, kDelayDeathSafetyBuffer);
+			this->schedule(schedule_selector(MyPlayLayer::runDelayedDeath), scheduledDelay);
+			pendingDeathDelayReady = false;
+			pendingDeathDelaySeconds = -1.f;
+			return;
+		}
+
+		log::info("no delay conditions met, calling PlayLayer::destroyPlayer immediately");
 		PlayLayer::destroyPlayer(player, object);
-		
 	}
 };
