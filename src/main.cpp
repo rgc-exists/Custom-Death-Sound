@@ -4,7 +4,7 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include <Geode/modify/PlayLayer.hpp>
+// #include <Geode/modify/PlayLayer.hpp>
 #include "Utils.hpp"
 
 using namespace geode::prelude;
@@ -452,6 +452,7 @@ class $modify(MenuLayer) {
 	}
 };
 
+/*
 class $modify(MyPlayLayer, PlayLayer) {
 	struct Fields {
 		bool m_delayDeathBypassOnce = false;
@@ -618,3 +619,4 @@ class $modify(MyPlayLayer, PlayLayer) {
 		PlayLayer::destroyPlayer(player, object);
 	}
 };
+*/

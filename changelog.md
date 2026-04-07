@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.0-beta.5
+
+- Removed "Delay Death" setting temporarily while we fix an issue with it
+
 ## v2.0.0-beta.4
 
 - Add SFX length

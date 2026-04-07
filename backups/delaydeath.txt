@@ -1,0 +1,6 @@
+"delay-death": {
+			"name": "Delay Death",
+			"type": "bool",
+			"default": false,
+			"description": "Delays the death to the moment the sound effect finishes playing. Off by default."
+		}
