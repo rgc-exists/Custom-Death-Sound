@@ -302,19 +302,21 @@ namespace deathsounds {
             return;
         }
 
-        auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
-        bool wantsDownloading = toggler
-            ? !toggler->isOn()
-            : (m_downloadState == DownloadState::NotDownloaded);
-
-        if (wantsDownloading && m_downloadState == DownloadState::NotDownloaded) {
+        // Use the authoritative state instead of the toggler's transient visual state.
+        if (m_downloadState == DownloadState::NotDownloaded) {
             startPackDownload();
             return;
         }
 
-        if (!wantsDownloading && m_downloadState == DownloadState::Downloading) {
+        if (m_downloadState == DownloadState::Downloading) {
             cancelPackDownload();
         }
+    }
+
+    void SFXPackCell::onExit() {
+        m_cancelRequested = true;
+        m_packDownloadTask.cancel();
+        SFXCell::onExit();
     }
 
     void SFXPackCell::startPackDownload() {
@@ -347,6 +349,11 @@ namespace deathsounds {
     }
 
     void SFXPackCell::downloadNextSound() {
+        auto aliveToken = m_aliveToken;
+        if (!aliveToken || !*aliveToken) {
+            return;
+        }
+
         if (m_cancelRequested) {
             return;
         }
@@ -377,7 +384,11 @@ namespace deathsounds {
         auto soundId = m_soundIds[m_downloadIndex++];
         DSRequest::get()->getSFXInfo(
             soundId,
-            [this, soundId](matjson::Value const& payload) {
+            [this, soundId, aliveToken](matjson::Value const& payload) {
+                if (!aliveToken || !*aliveToken) {
+                    return;
+                }
+
                 if (m_cancelRequested) {
                     return;
                 }
@@ -435,7 +446,11 @@ namespace deathsounds {
 
                 m_packDownloadTask.spawn(
                     req.get(url),
-                    [this, soundId, displayName, outPath](web::WebResponse value) {
+                    [this, soundId, displayName, outPath, aliveToken](web::WebResponse value) {
+                        if (!aliveToken || !*aliveToken) {
+                            return;
+                        }
+
                         if (m_cancelRequested) {
                             return;
                         }
@@ -466,7 +481,11 @@ namespace deathsounds {
                     }
                 );
             },
-            [this, soundId](matjson::Value const&) {
+            [this, soundId, aliveToken](matjson::Value const&) {
+                if (!aliveToken || !*aliveToken) {
+                    return;
+                }
+
                 if (m_cancelRequested) {
                     return;
                 }

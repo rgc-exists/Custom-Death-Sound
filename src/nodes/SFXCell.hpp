@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include "../Utils.hpp"
@@ -83,6 +84,7 @@ namespace deathsounds {
         CCMenuItemToggler* m_downloadToggle = nullptr;
         CCMenuItemToggler* m_useToggle = nullptr;
         async::TaskHolder<web::WebResponse> m_downloadTask;
+        std::shared_ptr<bool> m_aliveToken;
         utils::PreviewPlaybackState m_previewState;
 
         static constexpr int kFinishDownloadActionTag = 0xD50;

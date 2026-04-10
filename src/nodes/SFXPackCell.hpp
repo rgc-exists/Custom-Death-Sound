@@ -12,6 +12,7 @@ namespace deathsounds {
         void onDownloadToggle(CCObject* sender) override;
         void onUseToggle(CCObject* sender) override;
         void onInfoPressed(CCObject* sender) override;
+        void onExit() override;
 
     private:
         std::vector<std::string> m_soundIds;
