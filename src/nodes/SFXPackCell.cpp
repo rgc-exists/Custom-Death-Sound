@@ -298,7 +298,11 @@ namespace deathsounds {
     }
 
     void SFXPackCell::onDownloadToggle(CCObject* sender) {
+        this->unschedule(schedule_selector(SFXPackCell::refreshActionButtonsDeferred));
+        this->schedule(schedule_selector(SFXPackCell::refreshActionButtonsDeferred), 0.f);
+
         if (m_downloadState == DownloadState::Downloaded) {
+            refreshActionButtons();
             return;
         }
 
@@ -310,7 +314,10 @@ namespace deathsounds {
 
         if (m_downloadState == DownloadState::Downloading) {
             cancelPackDownload();
+            return;
         }
+
+        refreshActionButtons();
     }
 
     void SFXPackCell::onExit() {
@@ -322,6 +329,8 @@ namespace deathsounds {
     void SFXPackCell::startPackDownload() {
         if (m_soundIds.empty()) {
             notifyProgress("Pack has no sounds to download.", NotificationIcon::Warning, 1.0f);
+            // A click can still flip the toggler internally; force UI to match state.
+            refreshActionButtons();
             return;
         }
 
@@ -337,6 +346,11 @@ namespace deathsounds {
 
         notifyProgress(fmt::format("Downloading {} sounds...", m_soundIds.size()), NotificationIcon::Loading, 0.8f);
         downloadNextSound();
+    }
+
+    void SFXPackCell::refreshActionButtonsDeferred(float) {
+        this->unschedule(schedule_selector(SFXPackCell::refreshActionButtonsDeferred));
+        refreshActionButtons();
     }
 
     void SFXPackCell::cancelPackDownload() {
