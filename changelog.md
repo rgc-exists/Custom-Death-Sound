@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.0-beta.7
+
+- Fixed bug where sound packs wouldn't download
+
 ## v2.0.0-beta.6
 
 - Fixed bug where closing the popup while a sound pack is in the middle of a download crashes the game

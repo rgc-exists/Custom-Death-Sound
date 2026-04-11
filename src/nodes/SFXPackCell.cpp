@@ -117,6 +117,106 @@ namespace {
         }
         return ids;
     }
+
+    matjson::Value extractSfxObject(matjson::Value const& payload) {
+        if (!payload.isObject()) {
+            return matjson::Value();
+        }
+
+        if (payload.contains("sfx") && payload["sfx"].isObject()) {
+            return payload["sfx"];
+        }
+
+        if (payload.contains("data")) {
+            auto const& data = payload["data"];
+            if (data.isObject()) {
+                if (data.contains("sfx") && data["sfx"].isObject()) {
+                    return data["sfx"];
+                }
+                return data;
+            }
+        }
+
+        return payload;
+    }
+
+    std::string getStringField(matjson::Value const& object, std::initializer_list<const char*> keys, std::string const& fallback = {}) {
+        if (!object.isObject()) {
+            return fallback;
+        }
+
+        for (auto const* key : keys) {
+            if (!object.contains(key)) {
+                continue;
+            }
+
+            auto value = object[key].asString();
+            if (!value) {
+                continue;
+            }
+
+            auto result = value.unwrapOr("");
+            if (!result.empty()) {
+                return result;
+            }
+        }
+
+        return fallback;
+    }
+
+    bool startsWith(std::string const& value, std::string_view prefix) {
+        return value.size() >= prefix.size() && std::equal(prefix.begin(), prefix.end(), value.begin());
+    }
+
+    std::string normalizeDownloadCandidate(std::string value, std::string const& soundId) {
+        if (value.empty()) {
+            return {};
+        }
+
+        if (startsWith(value, "http://") || startsWith(value, "https://")) {
+            return value;
+        }
+
+        if (value == soundId) {
+            return std::string("/sounds/") + soundId + ".wav";
+        }
+
+        if (value.front() == '/') {
+            return value;
+        }
+
+        if (value.find('/') == std::string::npos) {
+            return std::string("/sounds/") + value;
+        }
+
+        return std::string("/") + value;
+    }
+
+    void appendCandidate(std::vector<std::string>& out, std::string const& candidate) {
+        if (candidate.empty()) {
+            return;
+        }
+
+        if (std::find(out.begin(), out.end(), candidate) == out.end()) {
+            out.push_back(candidate);
+        }
+    }
+
+    std::string describeCandidates(std::vector<std::string> const& candidates) {
+        if (candidates.empty()) {
+            return "[]";
+        }
+
+        std::string result = "[";
+        for (size_t i = 0; i < candidates.size(); ++i) {
+            if (i > 0) {
+                result += ", ";
+            }
+            result += candidates[i];
+        }
+        result += "]";
+        return result;
+    }
 }
 
 namespace deathsounds {
@@ -248,9 +348,17 @@ namespace deathsounds {
             return;
         }
 
+        log::info("[Pack Download] Validating downloaded pack '{}' ({})", m_name, m_sfxId);
         for (auto const& soundId : m_soundIds) {
             auto path = resolveSoundPath(soundId);
             if (!std::filesystem::exists(path)) {
+                log::warn(
+                    "[Pack Download] Missing sound '{}' in pack '{}' ({}) at {}",
+                    soundId,
+                    m_name,
+                    m_sfxId,
+                    geode::utils::string::pathToString(path)
+                );
                 if (m_inUse) {
                     disablePackSoundsRespectingOtherPacks();
                 }
@@ -276,6 +384,14 @@ namespace deathsounds {
             auto path = resolveSoundPath(soundId);
             if (std::filesystem::exists(path)) {
                 ++foundDownloaded;
+            } else {
+                log::info(
+                    "[Pack Download] Missing file while recomputing pack '{}' ({}) sound '{}' -> {}",
+                    m_name,
+                    m_sfxId,
+                    soundId,
+                    geode::utils::string::pathToString(path)
+                );
             }
 
             if (!utils::isOnlineSfxPathUsed(path)) {
@@ -301,12 +417,21 @@ namespace deathsounds {
         this->unschedule(schedule_selector(SFXPackCell::refreshActionButtonsDeferred));
         this->schedule(schedule_selector(SFXPackCell::refreshActionButtonsDeferred), 0.f);
 
+        log::info(
+            "[Pack Download] Toggle pressed for '{}' ({}) state={} downloaded={} skipped={} failed={}",
+            m_name,
+            m_sfxId,
+            static_cast<int>(m_downloadState),
+            m_downloadedCount,
+            m_skippedCount,
+            m_failedCount
+        );
+
         if (m_downloadState == DownloadState::Downloaded) {
             refreshActionButtons();
             return;
         }
-
-        // Use the authoritative state instead of the toggler's transient visual state.
+        
         if (m_downloadState == DownloadState::NotDownloaded) {
             startPackDownload();
             return;
@@ -321,7 +446,9 @@ namespace deathsounds {
     }
 
     void SFXPackCell::onExit() {
+        log::info("[Pack Download] Exiting '{}' ({}) and cancelling in-flight tasks", m_name, m_sfxId);
         m_cancelRequested = true;
+        m_sfxInfoTask.cancel();
         m_packDownloadTask.cancel();
         SFXCell::onExit();
     }
@@ -329,10 +456,16 @@ namespace deathsounds {
     void SFXPackCell::startPackDownload() {
         if (m_soundIds.empty()) {
             notifyProgress("Pack has no sounds to download.", NotificationIcon::Warning, 1.0f);
-            // A click can still flip the toggler internally; force UI to match state.
             refreshActionButtons();
             return;
         }
+
+        log::info(
+            "[Pack Download] Starting pack '{}' ({}) with {} sounds",
+            m_name,
+            m_sfxId,
+            m_soundIds.size()
+        );
 
         m_preDownloadState = m_downloadState;
         m_preDownloadInUse = m_inUse;
@@ -354,12 +487,158 @@ namespace deathsounds {
     }
 
     void SFXPackCell::cancelPackDownload() {
+        log::info("[Pack Download] Cancel requested for '{}' ({})", m_name, m_sfxId);
         m_cancelRequested = true;
+        m_sfxInfoTask.cancel();
         m_packDownloadTask.cancel();
         m_downloadState = m_preDownloadState;
         m_inUse = m_preDownloadInUse;
         refreshActionButtons();
         notifyProgress("Pack download cancelled.", NotificationIcon::Warning, 0.8f);
+    }
+
+    void SFXPackCell::startSoundDownload(std::string const& soundId, std::string const& displayName, std::vector<std::string> candidates) {
+        appendCandidate(candidates, makeSoundRelativeUrl(soundId));
+
+        log::info(
+            "[Pack Download] Preparing sound '{}' ({}) with candidates {}",
+            displayName,
+            soundId,
+            describeCandidates(candidates)
+        );
+
+        if (std::filesystem::exists(resolveSoundPath(soundId))) {
+            log::info("[Pack Download] Skipping '{}' ({}) because it already exists", displayName, soundId);
+            ++m_skippedCount;
+            notifyProgress(
+                fmt::format("Skipped {} (already downloaded) [{} / {}]", displayName, m_downloadIndex, m_soundIds.size()),
+                NotificationIcon::Info,
+                0.7f
+            );
+            downloadNextSound();
+            return;
+        }
+
+        auto outPath = utils::getSfxDownloadPath(soundId, candidates.front());
+        log::info(
+            "[Pack Download] Output path for '{}' ({}) -> {}",
+            displayName,
+            soundId,
+            geode::utils::string::pathToString(outPath)
+        );
+        std::error_code ec;
+        std::filesystem::create_directories(outPath.parent_path(), ec);
+        if (ec) {
+            log::error(
+                "[Pack Download] Failed to create output directory for '{}' ({}) at {}: {}",
+                displayName,
+                soundId,
+                geode::utils::string::pathToString(outPath.parent_path()),
+                ec.message()
+            );
+            ++m_failedCount;
+            notifyProgress(fmt::format("Failed {} (dir error)", displayName), NotificationIcon::Error, 0.8f);
+            downloadNextSound();
+            return;
+        }
+
+        tryDownloadSound(soundId, displayName, candidates, 0);
+    }
+
+    void SFXPackCell::tryDownloadSound(std::string const& soundId, std::string const& displayName, std::vector<std::string> const& candidates, size_t candidateIndex) {
+        if (candidateIndex >= candidates.size()) {
+            log::error(
+                "[Pack Download] Exhausted all candidates for '{}' ({}) -> {}",
+                displayName,
+                soundId,
+                describeCandidates(candidates)
+            );
+            ++m_failedCount;
+            notifyProgress(fmt::format("Failed {} (download)", displayName), NotificationIcon::Error, 0.8f);
+            downloadNextSound();
+            return;
+        }
+
+        auto url = utils::makeSfxDownloadUrl(candidates[candidateIndex]);
+        if (url.empty()) {
+            log::warn(
+                "[Pack Download] Candidate {} for '{}' ({}) normalized to empty URL: {}",
+                candidateIndex,
+                displayName,
+                soundId,
+                candidates[candidateIndex]
+            );
+            tryDownloadSound(soundId, displayName, candidates, candidateIndex + 1);
+            return;
+        }
+
+        log::info(
+            "[Pack Download] Attempting candidate {} for '{}' ({}) -> {}",
+            candidateIndex,
+            displayName,
+            soundId,
+            url
+        );
+
+        web::WebRequest req;
+        req.timeout(std::chrono::seconds(20));
+
+        auto aliveToken = m_aliveToken;
+        m_packDownloadTask.spawn(
+            req.get(url),
+            [this, soundId, displayName, candidates, candidateIndex, aliveToken, url](web::WebResponse value) {
+                if (!aliveToken || !*aliveToken) {
+                    return;
+                }
+
+                if (m_cancelRequested) {
+                    return;
+                }
+
+                if (!value.ok()) {
+                    log::warn(
+                        "[Pack Download] HTTP failure for '{}' ({}) candidate {} code={} url={}",
+                        displayName,
+                        soundId,
+                        candidateIndex,
+                        value.code(),
+                        url
+                    );
+                    tryDownloadSound(soundId, displayName, candidates, candidateIndex + 1);
+                    return;
+                }
+
+                auto outPath = utils::getSfxDownloadPath(soundId, candidates[candidateIndex]);
+                auto writeResult = value.into(outPath);
+                if (!writeResult.isOk()) {
+                    log::error(
+                        "[Pack Download] Failed to write '{}' ({}) candidate {} to {}",
+                        displayName,
+                        soundId,
+                        candidateIndex,
+                        geode::utils::string::pathToString(outPath)
+                    );
+                    tryDownloadSound(soundId, displayName, candidates, candidateIndex + 1);
+                    return;
+                }
+
+                log::info(
+                    "[Pack Download] Saved '{}' ({}) candidate {} to {}",
+                    displayName,
+                    soundId,
+                    candidateIndex,
+                    geode::utils::string::pathToString(outPath)
+                );
+                utils::saveDownloadedSfxMetadata(outPath, soundId, displayName);
+                ++m_downloadedCount;
+                notifyProgress(
+                    fmt::format("Downloaded {} [{} / {}]", displayName, m_downloadIndex, m_soundIds.size()),
+                    NotificationIcon::Success,
+                    0.7f
+                );
+                downloadNextSound();
+            }
+        );
     }
 
     void SFXPackCell::downloadNextSound() {
@@ -374,9 +653,25 @@ namespace deathsounds {
 
         if (m_downloadIndex >= m_soundIds.size()) {
             if (m_failedCount > 0) {
+                log::warn(
+                    "[Pack Download] Pack '{}' ({}) finished with failures: downloaded={} skipped={} failed={}",
+                    m_name,
+                    m_sfxId,
+                    m_downloadedCount,
+                    m_skippedCount,
+                    m_failedCount
+                );
                 m_downloadState = m_preDownloadState;
                 m_inUse = m_preDownloadInUse;
             } else {
+                log::info(
+                    "[Pack Download] Pack '{}' ({}) completed successfully: downloaded={} skipped={} failed={}",
+                    m_name,
+                    m_sfxId,
+                    m_downloadedCount,
+                    m_skippedCount,
+                    m_failedCount
+                );
                 registerDownloadedPackMetadata(m_sfxId, m_soundIds);
                 recomputePackStateFromSounds(true);
                 DSRequest::get()->incrementPackDownload(m_sfxId);
@@ -396,9 +691,36 @@ namespace deathsounds {
         }
 
         auto soundId = m_soundIds[m_downloadIndex++];
-        DSRequest::get()->getSFXInfo(
+        log::info(
+            "[Pack Download] Queueing sound {} of {}: '{}' in pack '{}' ({})",
+            m_downloadIndex,
+            m_soundIds.size(),
             soundId,
-            [this, soundId, aliveToken](matjson::Value const& payload) {
+            m_name,
+            m_sfxId
+        );
+        auto sfxInfoUrl = utils::makeSfxDownloadUrl(std::string("/sfx/") + soundId);
+        if (sfxInfoUrl.empty()) {
+            log::error("[Pack Download] Cannot resolve metadata URL for '{}' ({})", m_name, soundId);
+            ++m_failedCount;
+            notifyProgress(fmt::format("Failed {} (bad server URL)", soundId), NotificationIcon::Error, 0.8f);
+            downloadNextSound();
+            return;
+        }
+
+        log::info(
+            "[Pack Download] Fetching metadata for pack '{}' ({}) sound '{}' from {}",
+            m_name,
+            m_sfxId,
+            soundId,
+            sfxInfoUrl
+        );
+
+        web::WebRequest req;
+        req.timeout(std::chrono::seconds(30));
+        m_sfxInfoTask.spawn(
+            req.get(sfxInfoUrl),
+            [this, soundId, aliveToken](web::WebResponse response) {
                 if (!aliveToken || !*aliveToken) {
                     return;
                 }
@@ -407,106 +729,47 @@ namespace deathsounds {
                     return;
                 }
 
-                if (!payload.contains("sfx")) {
-                    ++m_failedCount;
-                    notifyProgress(fmt::format("Failed {} (lookup)", soundId), NotificationIcon::Error, 0.8f);
-                    downloadNextSound();
-                    return;
-                }
-
-                auto sfx = payload["sfx"];
-                auto relativeUrl = sfx.contains("url")
-                    ? sfx["url"].asString().unwrapOr("")
-                    : std::string();
-                auto displayName = sfx.contains("name")
-                    ? sfx["name"].asString().unwrapOr(std::string(soundId))
-                    : std::string(soundId);
-
-                if (relativeUrl.empty()) {
-                    relativeUrl = makeSoundRelativeUrl(soundId);
-                }
-
-                auto outPath = utils::getSfxDownloadPath(soundId, relativeUrl);
-                if (std::filesystem::exists(outPath)) {
-                    ++m_skippedCount;
-                    notifyProgress(
-                        fmt::format("Skipped {} (already downloaded) [{} / {}]", displayName, m_downloadIndex, m_soundIds.size()),
-                        NotificationIcon::Info,
-                        0.7f
+                if (!response.ok()) {
+                    log::warn(
+                        "[Pack Download] Metadata request failed for '{}' ({}) HTTP {}",
+                        m_name,
+                        soundId,
+                        response.code()
                     );
-                    downloadNextSound();
+                    startSoundDownload(soundId, soundId, { makeSoundRelativeUrl(soundId) });
                     return;
                 }
 
-                std::error_code ec;
-                std::filesystem::create_directories(outPath.parent_path(), ec);
-                if (ec) {
-                    ++m_failedCount;
-                    notifyProgress(fmt::format("Failed {} (dir error)", displayName), NotificationIcon::Error, 0.8f);
-                    downloadNextSound();
+                auto json = response.json();
+                if (!json.isOk()) {
+                    log::error(
+                        "[Pack Download] Metadata response was not JSON for '{}' ({})",
+                        m_name,
+                        soundId
+                    );
+                    startSoundDownload(soundId, soundId, { makeSoundRelativeUrl(soundId) });
                     return;
                 }
 
-                auto url = utils::makeSfxDownloadUrl(relativeUrl);
-                if (url.empty()) {
-                    ++m_failedCount;
-                    notifyProgress(fmt::format("Failed {} (bad URL)", displayName), NotificationIcon::Error, 0.8f);
-                    downloadNextSound();
-                    return;
-                }
+                auto payload = json.unwrap();
+                auto sfx = extractSfxObject(payload);
+                auto displayName = getStringField(sfx, { "name", "title" }, std::string(soundId));
+                std::vector<std::string> candidates;
+                appendCandidate(candidates, normalizeDownloadCandidate(getStringField(sfx, { "url" }), soundId));
+                appendCandidate(candidates, normalizeDownloadCandidate(getStringField(sfx, { "soundUrl" }), soundId));
+                appendCandidate(candidates, normalizeDownloadCandidate(getStringField(sfx, { "downloadUrl" }), soundId));
+                appendCandidate(candidates, normalizeDownloadCandidate(getStringField(sfx, { "file" }), soundId));
 
-                web::WebRequest req;
-                req.timeout(std::chrono::seconds(20));
-
-                m_packDownloadTask.spawn(
-                    req.get(url),
-                    [this, soundId, displayName, outPath, aliveToken](web::WebResponse value) {
-                        if (!aliveToken || !*aliveToken) {
-                            return;
-                        }
-
-                        if (m_cancelRequested) {
-                            return;
-                        }
-
-                        if (!value.ok()) {
-                            ++m_failedCount;
-                            notifyProgress(fmt::format("Failed {} (HTTP {})", displayName, value.code()), NotificationIcon::Error, 0.8f);
-                            downloadNextSound();
-                            return;
-                        }
-
-                        auto writeResult = value.into(outPath);
-                        if (!writeResult.isOk()) {
-                            ++m_failedCount;
-                            notifyProgress(fmt::format("Failed saving {}", displayName), NotificationIcon::Error, 0.8f);
-                            downloadNextSound();
-                            return;
-                        }
-
-                        utils::saveDownloadedSfxMetadata(outPath, soundId, displayName);
-                        ++m_downloadedCount;
-                        notifyProgress(
-                            fmt::format("Downloaded {} [{} / {}]", displayName, m_downloadIndex, m_soundIds.size()),
-                            NotificationIcon::Success,
-                            0.7f
-                        );
-                        downloadNextSound();
-                    }
+                log::info(
+                    "[Pack Download] Metadata for pack '{}' ({}) sound '{}' resolved name='{}' candidates={}",
+                    m_name,
+                    m_sfxId,
+                    soundId,
+                    displayName,
+                    describeCandidates(candidates)
                 );
-            },
-            [this, soundId, aliveToken](matjson::Value const&) {
-                if (!aliveToken || !*aliveToken) {
-                    return;
-                }
 
-                if (m_cancelRequested) {
-                    return;
-                }
-
-                ++m_failedCount;
-                notifyProgress(fmt::format("Failed {} (lookup)", soundId), NotificationIcon::Error, 0.8f);
-                downloadNextSound();
+                startSoundDownload(soundId, displayName, std::move(candidates));
             }
         );
     }

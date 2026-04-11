@@ -101,6 +101,7 @@ namespace deathsounds {
         m_showTags = showTags;
         m_tags = normalizeAndOrderTags(std::move(tags));
         m_sfxObject = std::move(sfxObject);
+        m_aliveToken = std::make_shared<bool>(true);
         auto existingPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
         bool alreadyDownloaded = std::filesystem::exists(existingPath);
         if (alreadyDownloaded) {
@@ -332,6 +333,9 @@ namespace deathsounds {
     void SFXCell::onExit() {
         this->unschedule(schedule_selector(SFXCell::checkPreviewFinished));
         stopPreview();
+        if (m_aliveToken) {
+            *m_aliveToken = false;
+        }
         CCLayer::onExit();
     }
 

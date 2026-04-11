@@ -26,6 +26,7 @@ namespace deathsounds {
         bool m_cancelRequested = false;
         DownloadState m_preDownloadState = DownloadState::NotDownloaded;
         bool m_preDownloadInUse = false;
+        async::TaskHolder<web::WebResponse> m_sfxInfoTask;
         async::TaskHolder<web::WebResponse> m_packDownloadTask;
 
         static std::string makeSoundRelativeUrl(std::string const& soundId);
@@ -34,6 +35,8 @@ namespace deathsounds {
         void recomputePackStateFromSounds(bool forceStateUpdate = false);
         void startPackDownload();
         void cancelPackDownload();
+        void startSoundDownload(std::string const& soundId, std::string const& displayName, std::vector<std::string> candidates);
+        void tryDownloadSound(std::string const& soundId, std::string const& displayName, std::vector<std::string> const& candidates, size_t candidateIndex);
         void downloadNextSound();
         void notifyProgress(std::string const& message, NotificationIcon icon = NotificationIcon::Info, float time = 0.8f);
         void setPackUsageEnabled(bool enabled);
