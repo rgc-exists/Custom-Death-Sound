@@ -301,6 +301,16 @@ void SFXIndexPopup::onInfoButton(CCObject*) {
             auto entry = root[code];
             if (entry.contains("title")) title = entry["title"].asString().unwrapOr("");
             if (entry.contains("description")) desc = entry["description"].asString().unwrapOr("");
+            if (entry.contains("credit") && entry["credit"].isObject()) {
+                auto credit = entry["credit"];
+                std::string author = credit.contains("author") ? credit["author"].asString().unwrapOr("") : "";
+                std::string link = credit.contains("link") ? credit["link"].asString().unwrapOr("") : "";
+                if (!author.empty() && !link.empty()) {
+                    desc += "\n\nDescription by [" + author + "](" + link + ").";
+                } else if (!author.empty()) {
+                    desc += "\n\nDescription by [" + author + "](" + link + ").";
+                }
+            }
         }
     } else {
         log::warn("Failed to load or parse curl-error-desc.json");
