@@ -25,7 +25,10 @@ private:
         CCMenuItemSpriteExtra* resetToFirstPageBtn = nullptr;
         CCClippingNode* clipping = nullptr;
         CCMenuItemSpriteExtra* searchFilterBtn = nullptr;
+        CCMenuItemSpriteExtra* infoButton = nullptr;
+        std::string lastErrorCode;
     };
+    void onInfoButton(CCObject*);
 
     CCLayerMultiplexR* m_tabHost = nullptr;
     TabWidgets m_downloadedWidgets;

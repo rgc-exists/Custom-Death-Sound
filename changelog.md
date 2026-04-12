@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.1.0
+
+- Added error descriptions
+- Improved server URL setting
+
 ## v2.0.0-beta.7
 
 - Fixed bug where sound packs wouldn't download

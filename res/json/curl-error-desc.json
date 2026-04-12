@@ -1,0 +1,662 @@
+{
+    "0": {
+        "title": "CURLE_OK",
+        "description": "All fine. Proceed as usual."
+    },
+    "-1": {
+        "title": "CURLE_UNSUPPORTED_PROTOCOL",
+        "description": "The URL you passed to libcurl used a protocol that this libcurl does not support. The support might be a compile-time option that you did not use, it can be a misspelled protocol string or a protocol libcurl has no code for."
+    },
+    "-2": {
+        "title": "CURLE_FAILED_INIT",
+        "description": "Early initialization code failed. This is likely to be an internal error or problem, or a resource problem where something fundamental could not get done at init time."
+    },
+    "-3": {
+        "title": "CURLE_URL_MALFORMAT",
+        "description": "The URL was not properly formatted. "
+    },
+    "-4": {
+        "title": "CURLE_NOT_BUILT_IN",
+        "description": "A requested feature, protocol or option was not found built into this libcurl due to a build-time decision. This means that a feature or option was not enabled or explicitly disabled when libcurl was built and in order to get it to function you have to get a rebuilt libcurl."
+    },
+    "-5": {
+        "title": "CURLE_COULDNT_RESOLVE_PROXY",
+        "description": "Could not resolve proxy. The given proxy host could not be resolved."
+    },
+    "-6": {
+        "title": "CURLE_COULDNT_RESOLVE_HOST",
+        "description": "Could not resolve host. The given remote host was not resolved."
+    },
+    "-7": {
+        "title": "CURLE_COULDNT_CONNECT",
+        "description": "Failed to connect() to host or proxy."
+    },
+    "-8": {
+        "title": "CURLE_WEIRD_SERVER_REPLY",
+        "description": "The server sent data libcurl could not parse. This error code was known as CURLE_FTP_WEIRD_SERVER_REPLY before 7.51.0."
+    },
+    "-9": {
+        "title": "CURLE_REMOTE_ACCESS_DENIED",
+        "description": "We were denied access to the resource given in the URL. For FTP, this occurs while trying to change to the remote directory."
+    },
+    "-10": {
+        "title": "CURLE_FTP_ACCEPT_FAILED",
+        "description": "While waiting for the server to connect back when an active FTP session is used, an error code was sent over the control connection or similar."
+    },
+    "-11": {
+        "title": "CURLE_FTP_WEIRD_PASS_REPLY",
+        "description": "After having sent the FTP password to the server, libcurl expects a proper reply. This error code indicates that an unexpected code was returned."
+    },
+    "-12": {
+        "title": "CURLE_FTP_ACCEPT_TIMEOUT",
+        "description": "During an active FTP session while waiting for the server to connect, the [CURLOPT_ACCEPTTIMEOUT_MS](https://curl.se/libcurl/c/CURLOPT_ACCEPTTIMEOUT_MS.html) (or the internal default) timeout expired."
+    },
+    "-13": {
+        "title": "CURLE_FTP_WEIRD_PASV_REPLY",
+        "description": "libcurl failed to get a sensible result back from the server as a response to either a PASV or an EPSV command. The server is flawed."
+    },
+    "-14": {
+        "title": "CURLE_FTP_WEIRD_227_FORMAT",
+        "description": "FTP servers return a 227-line as a response to a PASV command. If libcurl fails to parse that line, this return code is passed back."
+    },
+    "-15": {
+        "title": "CURLE_FTP_CANT_GET_HOST",
+        "description": "An internal failure to lookup the host used for the new connection."
+    },
+    "-16": {
+        "title": "CURLE_HTTP2",
+        "description": "A problem was detected in the HTTP2 framing layer. This is somewhat generic and can be one out of several problems, see the error buffer for details."
+    },
+    "-17": {
+        "title": "CURLE_FTP_COULDNT_SET_TYPE",
+        "description": "Received an error when trying to set the transfer mode to binary or ASCII."
+    },
+    "-18": {
+        "title": "CURLE_PARTIAL_FILE",
+        "description": "A file transfer was shorter or larger than expected. This happens when the server first reports an expected transfer size, and then delivers data that does not match the previously given size."
+    },
+    "-19": {
+        "title": "CURLE_FTP_COULDNT_RETR_FILE",
+        "description": "This was either a weird reply to a 'RETR' command or a zero byte transfer complete."
+    },
+    "-20": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-21": {
+        "title": "CURLE_QUOTE_ERROR",
+        "description": "When sending custom \"QUOTE\" commands to the remote server, one of the commands returned an error code that was 400 or higher (for FTP) or otherwise indicated unsuccessful completion of the command."
+    },
+    "-22": {
+        "title": "CURLE_HTTP_RETURNED_ERROR",
+        "description": "This is returned if [CURLOPT_FAILONERROR](https://curl.se/libcurl/c/CURLOPT_FAILONERROR.html) is set TRUE and the HTTP server returns an error code that is >= 400."
+    },
+    "-23": {
+        "title": "CURLE_WRITE_ERROR",
+        "description": "An error occurred when writing received data to a local file, or an error was returned to libcurl from a write callback."
+    },
+    "-24": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-25": {
+        "title": "CURLE_UPLOAD_FAILED",
+        "description": "Failed starting the upload. For FTP, the server typically denied the STOR command. The error buffer usually contains the server's explanation for this."
+    },
+    "-26": {
+        "title": "CURLE_READ_ERROR",
+        "description": "There was a problem reading a local file or an error returned by the read callback."
+    },
+    "-27": {
+        "title": "CURLE_OUT_OF_MEMORY",
+        "description": "A memory allocation request failed. This is serious badness and things are severely screwed up if this ever occurs."
+    },
+    "-28": {
+        "title": "CURLE_OPERATION_TIMEDOUT",
+        "description": "Operation timeout. The specified time-out period was reached according to the conditions."
+    },
+    "-29": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-30": {
+        "title": "CURLE_FTP_PORT_FAILED",
+        "description": "The FTP PORT command returned error. This mostly happens when you have not specified a good enough address for libcurl to use. See [CURLOPT_FTPPORT](https://curl.se/libcurl/c/CURLOPT_FTPPORT.html)."
+    },
+    "-31": {
+        "title": "CURLE_FTP_COULDNT_USE_REST",
+        "description": "The FTP REST command returned error. This should never happen if the server is sane."
+    },
+    "-32": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-33": {
+        "title": "CURLE_RANGE_ERROR",
+        "description": "The server does not support or accept range requests."
+    },
+    "-34": {
+        "title": "Obsolete error",
+        "description": "Not used since 7.56.0."
+    },
+    "-35": {
+        "title": "CURLE_SSL_CONNECT_ERROR",
+        "description": "A problem occurred somewhere in the SSL/TLS handshake. You really want the error buffer and read the message there as it pinpoints the problem slightly more. Could be certificates (file formats, paths, permissions), passwords, and others."
+    },
+    "-36": {
+        "title": "CURLE_BAD_DOWNLOAD_RESUME",
+        "description": "The download could not be resumed because the specified offset was out of the file boundary."
+    },
+    "-37": {
+        "title": "CURLE_FILE_COULDNT_READ_FILE",
+        "description": "A file given with FILE:// could not be opened. Most likely because the file path does not identify an existing file. Did you check file permissions?"
+    },
+    "-38": {
+        "title": "CURLE_LDAP_CANNOT_BIND",
+        "description": "LDAP cannot bind. LDAP bind operation failed."
+    },
+    "-39": {
+        "title": "CURLE_LDAP_SEARCH_FAILED",
+        "description": "LDAP search failed."
+    },
+    "-40": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-41": {
+        "title": "Obsolete error",
+        "description": "Not used since 7.53.0."
+    },
+    "-42": {
+        "title": "CURLE_ABORTED_BY_CALLBACK",
+        "description": "Aborted by callback. A callback returned \"abort\" to libcurl."
+    },
+    "-43": {
+        "title": "CURLE_BAD_FUNCTION_ARGUMENT",
+        "description": "A function was called with a bad parameter."
+    },
+    "-44": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-45": {
+        "title": "CURLE_INTERFACE_FAILED",
+        "description": "Interface error. A specified outgoing interface could not be used. Set which interface to use for outgoing connections' source IP address with [CURLOPT_INTERFACE](https://curl.se/libcurl/c/CURLOPT_INTERFACE.html)."
+    },
+    "-46": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-47": {
+        "title": "CURLE_TOO_MANY_REDIRECTS",
+        "description": "Too many redirects. When following redirects, libcurl hit the maximum amount. Set your limit with [CURLOPT_MAXREDIRS](https://curl.se/libcurl/c/CURLOPT_MAXREDIRS.html)."
+    },
+    "-48": {
+        "title": "CURLE_UNKNOWN_OPTION",
+        "description": "An option passed to libcurl is not recognized/known. Refer to the appropriate documentation. This is most likely a problem in the program that uses libcurl. The error buffer might contain more specific information about which exact option it concerns."
+    },
+    "-49": {
+        "title": "CURLE_SETOPT_OPTION_SYNTAX",
+        "description": "An option passed in to a setopt was wrongly formatted. See error message for details about what option."
+    },
+    "-50": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-51": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-52": {
+        "title": "CURLE_GOT_NOTHING",
+        "description": "Nothing was returned from the server, and under the circumstances, getting nothing is considered an error."
+    },
+    "-53": {
+        "title": "CURLE_SSL_ENGINE_NOTFOUND",
+        "description": "The specified crypto engine was not found."
+    },
+    "-54": {
+        "title": "CURLE_SSL_ENGINE_SETFAILED",
+        "description": "Failed setting the selected SSL crypto engine as default."
+    },
+    "-55": {
+        "title": "CURLE_SEND_ERROR",
+        "description": "Failed sending network data."
+    },
+    "-56": {
+        "title": "CURLE_RECV_ERROR",
+        "description": "Failure with receiving network data."
+    },
+    "-57": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-58": {
+        "title": "CURLE_SSL_CERTPROBLEM",
+        "description": "problem with the local client certificate."
+    },
+    "-59": {
+        "title": "CURLE_SSL_CIPHER",
+        "description": "Could not use specified cipher."
+    },
+    "-60": {
+        "title": "CURLE_PEER_FAILED_VERIFICATION",
+        "description": "The remote server's SSL certificate or SSH fingerprint was deemed not OK. This error code has been unified with CURLE_SSL_CACERT since 7.62.0. Its previous value was 51."
+    },
+    "-61": {
+        "title": "CURLE_BAD_CONTENT_ENCODING",
+        "description": "Unrecognized transfer encoding."
+    },
+    "-62": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-63": {
+        "title": "CURLE_FILESIZE_EXCEEDED",
+        "description": "Maximum file size exceeded."
+    },
+    "-64": {
+        "title": "CURLE_USE_SSL_FAILED",
+        "description": "Requested FTP SSL level failed."
+    },
+    "-65": {
+        "title": "CURLE_SEND_FAIL_REWIND",
+        "description": "When doing a send operation curl had to rewind the data to retransmit, but the rewinding operation failed."
+    },
+    "-66": {
+        "title": "CURLE_SSL_ENGINE_INITFAILED",
+        "description": "Initiating the SSL Engine failed."
+    },
+    "-67": {
+        "title": "CURLE_LOGIN_DENIED",
+        "description": "The remote server denied curl to login"
+    },
+    "-68": {
+        "title": "CURLE_TFTP_NOTFOUND",
+        "description": "File not found on TFTP server."
+    },
+    "-69": {
+        "title": "CURLE_TFTP_PERM",
+        "description": "Permission problem on TFTP server."
+    },
+    "-70": {
+        "title": "CURLE_REMOTE_DISK_FULL",
+        "description": "Out of disk space on the server."
+    },
+    "-71": {
+        "title": "CURLE_TFTP_ILLEGAL",
+        "description": "Illegal TFTP operation."
+    },
+    "-72": {
+        "title": "CURLE_TFTP_UNKNOWNID",
+        "description": "Unknown TFTP transfer ID."
+    },
+    "-73": {
+        "title": "CURLE_REMOTE_FILE_EXISTS",
+        "description": "File already exists and is not overwritten."
+    },
+    "-74": {
+        "title": "CURLE_TFTP_NOSUCHUSER",
+        "description": "This error should never be returned by a properly functioning TFTP server."
+    },
+    "-75": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-76": {
+        "title": "Obsolete error",
+        "description": "Not used in modern versions."
+    },
+    "-77": {
+        "title": "CURLE_SSL_CACERT_BADFILE",
+        "description": "Problem with reading the SSL CA cert (path? access rights?)"
+    },
+    "-78": {
+        "title": "CURLE_REMOTE_FILE_NOT_FOUND",
+        "description": "The resource referenced in the URL does not exist."
+    },
+    "-79": {
+        "title": "CURLE_SSH",
+        "description": "An unspecified error occurred during the SSH session."
+    },
+    "-80": {
+        "title": "CURLE_SSL_SHUTDOWN_FAILED",
+        "description": "Failed to shut down the SSL connection."
+    },
+    "-81": {
+        "title": "CURLE_AGAIN",
+        "description": "Socket is not ready for send/recv. Wait until it is ready and try again. This return code is only returned from [curl_easy_recv](https://curl.se/libcurl/c/curl_easy_recv.html) and [curl_easy_send](https://curl.se/libcurl/c/curl_easy_send.html)"
+    },
+    "-82": {
+        "title": "CURLE_SSL_CRL_BADFILE",
+        "description": "Failed to load CRL file"
+    },
+    "-83": {
+        "title": "CURLE_SSL_ISSUER_ERROR",
+        "description": "Issuer check failed"
+    },
+    "-84": {
+        "title": "CURLE_FTP_PRET_FAILED",
+        "description": "The FTP server does not understand the PRET command at all or does not support the given argument. Be careful when using [CURLOPT_CUSTOMREQUEST](https://curl.se/libcurl/c/CURLOPT_CUSTOMREQUEST.html), a custom LIST command is sent with the PRET command before PASV as well."
+    },
+    "-85": {
+        "title": "CURLE_RTSP_CSEQ_ERROR",
+        "description": "Mismatch of RTSP CSeq numbers."
+    },
+    "-86": {
+        "title": "CURLE_RTSP_SESSION_ERROR",
+        "description": "Mismatch of RTSP Session Identifiers."
+    },
+    "-87": {
+        "title": "CURLE_FTP_BAD_FILE_LIST",
+        "description": "Unable to parse FTP file list (during FTP wildcard downloading)."
+    },
+    "-88": {
+        "title": "CURLE_CHUNK_FAILED",
+        "description": "Chunk callback reported error."
+    },
+    "-89": {
+        "title": "CURLE_NO_CONNECTION_AVAILABLE",
+        "description": "(For internal use only, is never returned by libcurl) No connection available, the session is queued."
+    },
+    "-90": {
+        "title": "CURLE_SSL_PINNEDPUBKEYNOTMATCH",
+        "description": "Failed to match the pinned key specified with [CURLOPT_PINNEDPUBLICKEY](https://curl.se/libcurl/c/CURLOPT_PINNEDPUBLICKEY.html)."
+    },
+    "-91": {
+        "title": "CURLE_SSL_INVALIDCERTSTATUS",
+        "description": "Status returned failure when asked with [CURLOPT_SSL_VERIFYSTATUS](https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYSTATUS.html)."
+    },
+    "-92": {
+        "title": "CURLE_HTTP2_STREAM",
+        "description": "Stream error in the HTTP/2 framing layer."
+    },
+    "-93": {
+        "title": "CURLE_RECURSIVE_API_CALL",
+        "description": "An API function was called from inside a callback."
+    },
+    "-94": {
+        "title": "CURLE_AUTH_ERROR",
+        "description": "An authentication function returned an error."
+    },
+    "-95": {
+        "title": "CURLE_HTTP3",
+        "description": "A problem was detected in the HTTP/3 layer. This is somewhat generic and can be one out of several problems, see the error buffer for details."
+    },
+    "-96": {
+        "title": "CURLE_QUIC_CONNECT_ERROR",
+        "description": "QUIC connection error. This error may be caused by an SSL library error. QUIC is the protocol used for HTTP/3 transfers."
+    },
+    "-97": {
+        "title": "CURLE_PROXY",
+        "description": "Proxy handshake error. [CURLINFO_PROXY_ERROR](https://curl.se/libcurl/c/CURLINFO_PROXY_ERROR.html) provides extra details on the specific problem."
+    },
+    "-98": {
+        "title": "CURLE_SSL_CLIENTCERT",
+        "description": "SSL Client Certificate required."
+    },
+    "-99": {
+        "title": "CURLE_UNRECOVERABLE_POLL",
+        "description": "An internal call to poll() or select() returned error that is not recoverable."
+    },
+    "-100": {
+        "title": "CURLE_TOO_LARGE",
+        "description": "A value or data field grew larger than allowed."
+    },
+    "-101": {
+        "title": "CURLE_ECH_REQUIRED",
+        "description": "ECH was attempted but failed."
+    },
+    "100": {
+        "title": "Continue",
+        "description": "This interim response indicates that the client should continue the request or ignore the response if the request is already finished."
+    },
+    "101": {
+        "title": "Switching Protocols",
+        "description": "This code is sent in response to an `[Upgrade](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Upgrade)` request header from the client and indicates the protocol the server is switching to."
+    },
+    "102": {
+        "title": "Processing",
+        "description": "This code was used in [WebDAV](https://developer.mozilla.org/en-US/docs/Glossary/WebDAV) contexts to indicate that a request has been received by the server, but no status was available at the time of the response."
+    },
+    "103": {
+        "title": "Early Hints",
+        "description": "This status code is primarily intended to be used with the `[Link](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Link)` header, letting the user agent start [preloading](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/preload) resources while the server prepares a response or [preconnect](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/preconnect) to an origin from which the page will need resources."
+    },
+    "200": {
+        "title": "OK",
+        "description": "The request succeeded. The result and meaning of \"success\" depends on the HTTP method:\n- `[GET](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/GET)`: The resource has been fetched and transmitted in the message body.\n- `[HEAD](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/HEAD)`: Representation headers are included in the response without any message body.\n- `[PUT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/PUT)` or `[POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/POST)`: The resource describing the result of the action is transmitted in the message body.\n- `[TRACE](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/TRACE)`: The message body contains the request as received by the server."
+    },
+    "201": {
+        "title": "Created",
+        "description": "The request succeeded, and a new resource was created as a result. This is typically the response sent after `[POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/POST)` requests, or some `[PUT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/PUT)` requests."
+    },
+    "202": {
+        "title": "Accepted",
+        "description": "The request has been received but not yet acted upon. It is noncommittal, since there is no way in HTTP to later send an asynchronous response indicating the outcome of the request. It is intended for cases where another process or server handles the request, or for batch processing."
+    },
+    "203": {
+        "title": "Non-Authoritative Information",
+        "description": "This response code means the returned metadata is not exactly the same as is available from the origin server, but is collected from a local or a third-party copy. This is mostly used for mirrors or backups of another resource. Except for that specific case, the `[200 OK](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/200)` response is preferred to this status."
+    },
+    "204": {
+        "title": "No Content",
+        "description": "There is no content to send for this request, but the headers are useful. The user agent may update its cached headers for this resource with the new ones."
+    },
+    "205": {
+        "title": "Reset Content",
+        "description": "Tells the user agent to reset the document which sent this request."
+    },
+    "206": {
+        "title": "Partial Content",
+        "description": "This response code is used in response to a [range request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) when the client has requested a part or parts of a resource."
+    },
+    "207": {
+        "title": "Multi-Status",
+        "description": "Conveys information about multiple resources, for situations where multiple status codes might be appropriate."
+    },
+    "208": {
+        "title": "Already Reported",
+        "description": "Used inside a `<dav:propstat>` response element to avoid repeatedly enumerating the internal members of multiple bindings to the same collection."
+    },
+    "226": {
+        "title": "IM Used",
+        "description": "The server has fulfilled a `[GET](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/GET)` request for the resource, and the response is a representation of the result of one or more instance-manipulations applied to the current instance."
+    },
+    "300": {
+        "title": "Multiple Choices",
+        "description": "In [agent-driven content negotiation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Content_negotiation#agent-driven_negotiation), the request has more than one possible response and the user agent or user should choose one of them. There is no standardized way for clients to automatically choose one of the responses, so this is rarely used."
+    },
+    "301": {
+        "title": "Moved Permanently",
+        "description": "The URL of the requested resource has been changed permanently. The new URL is given in the response."
+    },
+    "302": {
+        "title": "Found",
+        "description": "This response code means that the URI of requested resource has been changed *temporarily*. Further changes in the URI might be made in the future, so the same URI should be used by the client in future requests."
+    },
+    "303": {
+        "title": "See Other",
+        "description": "The server sent this response to direct the client to get the requested resource at another URI with a `[GET](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/GET)` request."
+    },
+    "304": {
+        "title": "Not Modified",
+        "description": "This is used for caching purposes. It tells the client that the response has not been modified, so the client can continue to use the same [cached](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching) version of the response."
+    },
+    "305": {
+        "title": "Use Proxy",
+        "description": "Defined in a previous version of the HTTP specification to indicate that a requested response must be accessed by a proxy. It has been deprecated due to security concerns regarding in-band configuration of a proxy."
+    },
+    "306": {
+        "title": "unused",
+        "description": "This response code is no longer used; but is reserved. It was used in a previous version of the HTTP/1.1 specification."
+    },
+    "307": {
+        "title": "Temporary Redirect",
+        "description": "The server sends this response to direct the client to get the requested resource at another URI with the same method that was used in the prior request. This has the same semantics as the `302 Found` response code, with the exception that the user agent must not change the HTTP method used: if a `[POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/POST)` was used in the first request, a `POST` must be used in the redirected request."
+    },
+    "308": {
+        "title": "Permanent Redirect",
+        "description": "This means that the resource is now permanently located at another URI, specified by the `[Location](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Location)` response header. This has the same semantics as the `301 Moved Permanently` HTTP response code, with the exception that the user agent must not change the HTTP method used: if a `[POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/POST)` was used in the first request, a `POST` must be used in the second request."
+    },
+    "400": {
+        "title": "Bad Request",
+        "description": "The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing)."
+    },
+    "401": {
+        "title": "Unauthorized",
+        "description": "Although the HTTP standard specifies \"unauthorized\", semantically this response means \"unauthenticated\". That is, the client must authenticate itself to get the requested response."
+    },
+    "402": {
+        "title": "Payment Required",
+        "description": "The initial purpose of this code was for digital payment systems, however this status code is rarely used and no standard convention exists."
+    },
+    "403": {
+        "title": "Forbidden",
+        "description": "The client does not have access rights to the content; that is, it is unauthorized, so the server is refusing to give the requested resource. Unlike `401 Unauthorized`, the client's identity is known to the server."
+    },
+    "404": {
+        "title": "Not Found",
+        "description": "The server cannot find the requested resource. In the browser, this means the URL is not recognized. In an API, this can also mean that the endpoint is valid but the resource itself does not exist. Servers may also send this response instead of `403 Forbidden` to hide the existence of a resource from an unauthorized client. This response code is probably the most well known due to its frequent occurrence on the web."
+    },
+    "405": {
+        "title": "Method Not Allowed",
+        "description": "The [request method](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods) is known by the server but is not supported by the target resource. For example, an API may not allow `DELETE` on a resource, or the `TRACE` method entirely."
+    },
+    "406": {
+        "title": "Not Acceptable",
+        "description": "This response is sent when the web server, after performing [server-driven content negotiation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Content_negotiation#server-driven_content_negotiation), doesn't find any content that conforms to the criteria given by the user agent."
+    },
+    "407": {
+        "title": "Proxy Authentication Required",
+        "description": "This is similar to `401 Unauthorized` but authentication is needed to be done by a proxy."
+    },
+    "408": {
+        "title": "Request Timeout",
+        "description": "This response is sent on an idle connection by some servers, even without any previous request by the client. It means that the server would like to shut down this unused connection. This response is used much more since some browsers use HTTP pre-connection mechanisms to speed up browsing. Some servers may shut down a connection without sending this message."
+    },
+    "409": {
+        "title": "Conflict",
+        "description": "This response is sent when a request conflicts with the current state of the server. In [WebDAV](https://developer.mozilla.org/en-US/docs/Glossary/WebDAV) remote web authoring, `409` responses are errors sent to the client so that a user might be able to resolve a conflict and resubmit the request."
+    },
+    "410": {
+        "title": "Gone",
+        "description": "This response is sent when the requested content has been permanently deleted from server, with no forwarding address. Clients are expected to remove their caches and links to the resource. The HTTP specification intends this status code to be used for \"limited-time, promotional services\". APIs should not feel compelled to indicate resources that have been deleted with this status code."
+    },
+    "411": {
+        "title": "Length Required",
+        "description": "Server rejected the request because the `[Content-Length](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Length)` header field is not defined and the server requires it."
+    },
+    "412": {
+        "title": "Precondition Failed",
+        "description": "In [conditional requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Conditional_requests), the client has indicated preconditions in its headers which the server does not meet."
+    },
+    "413": {
+        "title": "Content Too Large",
+        "description": "The request body is larger than limits defined by server. The server might close the connection or return a `[Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Retry-After)` header field."
+    },
+    "414": {
+        "title": "URI Too Long",
+        "description": "The URI requested by the client is longer than the server is willing to interpret."
+    },
+    "415": {
+        "title": "Unsupported Media Type",
+        "description": "The media format of the requested data is not supported by the server, so the server is rejecting the request."
+    },
+    "416": {
+        "title": "Range Not Satisfiable",
+        "description": "The [ranges](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) specified by the `Range` header field in the request cannot be fulfilled. It's possible that the range is outside the size of the target resource's data."
+    },
+    "417": {
+        "title": "Expectation Failed",
+        "description": "This response code means the expectation indicated by the `[Expect](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Expect)` request header field cannot be met by the server."
+    },
+    "418": {
+        "title": "I'm a teapot",
+        "description": "The server refuses the attempt to brew coffee with a teapot."
+    },
+    "421": {
+        "title": "Misdirected Request",
+        "description": "The request was directed at a server that is not able to produce a response. This can be sent by a server that is not configured to produce responses for the combination of scheme and authority that are included in the request URI."
+    },
+    "422": {
+        "title": "Unprocessable Content",
+        "description": "The request was well-formed but was unable to be followed due to semantic errors."
+    },
+    "423": {
+        "title": "Locked",
+        "description": "The resource that is being accessed is locked."
+    },
+    "424": {
+        "title": "Failed Dependency",
+        "description": "The request failed due to failure of a previous request."
+    },
+    "425": {
+        "title": "Too Early",
+        "description": "Indicates that the server is unwilling to risk processing a request that might be replayed."
+    },
+    "426": {
+        "title": "Upgrade Required",
+        "description": "The server refuses to perform the request using the current protocol but might be willing to do so after the client upgrades to a different protocol. The server sends an `[Upgrade](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Upgrade)` header in a 426 response to indicate the required protocol(s)."
+    },
+    "428": {
+        "title": "Precondition Required",
+        "description": "The origin server requires the request to be [conditional](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Conditional_requests). This response is intended to prevent the 'lost update' problem, where a client `[GET](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/GET)`s a resource's state, modifies it and `[PUT](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/PUT)`s it back to the server, when meanwhile a third party has modified the state on the server, leading to a conflict."
+    },
+    "429": {
+        "title": "Too Many Requests",
+        "description": "The user has sent too many requests in a given amount of time ([rate limiting](https://developer.mozilla.org/en-US/docs/Glossary/Rate_limit))."
+    },
+    "431": {
+        "title": "Request Header Fields Too Large",
+        "description": "The server is unwilling to process the request because its header fields are too large. The request may be resubmitted after reducing the size of the request header fields."
+    },
+    "451": {
+        "title": "Unavailable For Legal Reasons",
+        "description": "The user agent requested a resource that cannot legally be provided, such as a web page censored by a government."
+    },
+    "500": {
+        "title": "Internal Server Error",
+        "description": "The server has encountered a situation it does not know how to handle. This error is generic, indicating that the server cannot find a more appropriate `5XX` status code to respond with."
+    },
+    "501": {
+        "title": "Not Implemented",
+        "description": "The request method is not supported by the server and cannot be handled. The only methods that servers are required to support (and therefore must not return this code) are `[GET](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/GET)` and `[HEAD](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/HEAD)`."
+    },
+    "502": {
+        "title": "Bad Gateway",
+        "description": "This error response means that the server, while working as a gateway to get a response needed to handle the request, got an invalid response."
+    },
+    "503": {
+        "title": "Service Unavailable",
+        "description": "The server is not ready to handle the request. Common causes are a server that is down for maintenance or that is overloaded. Note that together with this response, a user-friendly page explaining the problem should be sent. This response should be used for temporary conditions and the `[Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Retry-After)` HTTP header should, if possible, contain the estimated time before the recovery of the service. The webmaster must also take care about the caching-related headers that are sent along with this response, as these temporary condition responses should usually not be cached."
+    },
+    "504": {
+        "title": "Gateway Timeout",
+        "description": "This error response is given when the server is acting as a gateway and cannot get a response in time."
+    },
+    "505": {
+        "title": "HTTP Version Not Supported",
+        "description": "The HTTP version used in the request is not supported by the server."
+    },
+    "506": {
+        "title": "Variant Also Negotiates",
+        "description": "The server has an internal configuration error: during content negotiation, the chosen variant is configured to engage in content negotiation itself, which results in circular references when creating responses."
+    },
+    "507": {
+        "title": "Insufficient Storage",
+        "description": "The method could not be performed on the resource because the server is unable to store the representation needed to successfully complete the request."
+    },
+    "508": {
+        "title": "Loop Detected",
+        "description": "The server detected an infinite loop while processing the request."
+    },
+    "510": {
+        "title": "Not Extended",
+        "description": "The client request declares an HTTP Extension ([RFC 2774](https://datatracker.ietf.org/doc/html/rfc2774)) that should be used to process the request, but the extension is not supported."
+    },
+    "511": {
+        "title": "Network Authentication Required",
+        "description": "Indicates that the client needs to authenticate to gain network access."
+    }
+}

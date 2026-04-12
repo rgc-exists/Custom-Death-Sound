@@ -14,7 +14,10 @@
 	"tags": [ "offline", "online", "customization", "content", "gameplay" ],
 	"resources": {
 		"sprites": [
-			"res/*.png"
+			"res/sprites/*.png"
+		],
+		"files": [
+			"res/json/*.json"
 		]
 	},
 	"links": {
@@ -36,7 +39,8 @@
 			"type": "string",
 			"default": "https://cds.omgrod.me",
 			"description": "Server URL for Death SFX index",
-			"filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890:/.-"
+			"match": "(http|https):\\/\\/([\\w_-]+(?:(?:\\.[\\w_-]+)+))([\\w.,@?^=%&:\\/~+#-]*[\\w@?^=%&\\/~+#-])",
+            "filter": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:.-_/0123456789"
 		},
 		"volume": {
 			"name": "Volume",

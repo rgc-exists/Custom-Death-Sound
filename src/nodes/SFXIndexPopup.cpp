@@ -1,4 +1,5 @@
 #include "SFXIndexPopup.hpp"
+#include "Geode/utils/file.hpp"
 #include "SearchFilterPopup.hpp"
 #include "Geode/ui/GeodeUI.hpp"
 #include "SFXCell.hpp"
@@ -10,18 +11,32 @@
 
 using namespace geode::prelude;
 
-namespace {
-    std::string trim(std::string value) {
-        auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
+std::string trim(std::string value) {
+    auto isSpace = [](unsigned char c) { return std::isspace(c) != 0; };
+    auto begin = std::find_if_not(value.begin(), value.end(), isSpace);
 
-        auto begin = std::find_if_not(value.begin(), value.end(), isSpace);
-        if (begin == value.end()) {
-            return "";
-        }
-
-        auto end = std::find_if_not(value.rbegin(), value.rend(), isSpace).base();
-        return std::string(begin, end);
+    if (begin == value.end()) {
+        return "";
     }
+
+    auto end = std::find_if_not(value.rbegin(), value.rend(), isSpace).base();
+    return std::string(begin, end);
+}
+
+static bool fileExists(const std::string& path) {
+    std::ifstream f(path);
+    return f.good();
+}
+
+static bool readFileString(const std::string& path, std::string& out) {
+    std::ifstream f(path, std::ios::in | std::ios::binary);
+    if (!f) return false;
+    f.seekg(0, std::ios::end);
+    size_t size = f.tellg();
+    f.seekg(0, std::ios::beg);
+    out.resize(size);
+    f.read(&out[0], size);
+    return true;
 }
 
 SFXIndexPopup::TabWidgets& SFXIndexPopup::widgetsForTab(Tab tab) {
@@ -52,6 +67,9 @@ void SFXIndexPopup::setTabLoading(TabWidgets& widgets) {
     if (m_pageLabel) {
         m_pageLabel->setVisible(true);
     }
+    if (widgets.infoButton) {
+        widgets.infoButton->setVisible(false);
+    }
 }
 
 void SFXIndexPopup::setTabContentVisible(TabWidgets& widgets, bool showPagination) {
@@ -66,11 +84,15 @@ void SFXIndexPopup::setTabContentVisible(TabWidgets& widgets, bool showPaginatio
     if (m_pageLabel) {
         m_pageLabel->setVisible(true);
     }
+    if (widgets.infoButton) {
+        widgets.infoButton->setVisible(false);
+    }
 }
 
 void SFXIndexPopup::setTabError(TabWidgets& widgets, char const* text, bool showResetToFirstPage) {
     widgets.loading->setVisible(false);
     widgets.error->setString(text);
+    widgets.lastErrorCode = text ? text : "";
     widgets.error->setVisible(true);
     if (widgets.errorMenu) {
         widgets.errorMenu->setVisible(showResetToFirstPage);
@@ -82,7 +104,38 @@ void SFXIndexPopup::setTabError(TabWidgets& widgets, char const* text, bool show
     if (m_pageLabel) {
         m_pageLabel->setVisible(false);
     }
+    if (widgets.infoButton) {
+        widgets.infoButton->setVisible(true);
+    }
+
+    if (widgets.infoButton) {
+        widgets.infoButton->removeFromParent();
+        widgets.infoButton = nullptr;
+    }
+
+    if (text && std::strcmp(text, "0") != 0) {
+        auto infoTabSprite = GeodeTabSprite::create("GJ_infoIcon_001.png", "Info", 96.f);
+        auto infoButton = CCMenuItemSpriteExtra::create(
+            infoTabSprite,
+            this,
+            menu_selector(SFXIndexPopup::onInfoButton)
+        );
+        float yOffset = -50.f;
+        if (std::string(text).find("404") != std::string::npos) {
+            yOffset = -90.f;
+        }
+        infoButton->setPosition({
+            widgets.layer->getContentSize().width / 2,
+            widgets.error->getPositionY() + yOffset
+        });
+        auto infoMenu = CCMenu::create();
+        infoMenu->setPosition({0.f, 0.f});
+        infoMenu->addChild(infoButton);
+        widgets.layer->addChild(infoMenu, 100);
+        widgets.infoButton = infoButton;
+    }
 }
+
 
 void SFXIndexPopup::setPaginationVisible(bool visible) {
     if (m_prevPageBtn) {
@@ -215,7 +268,45 @@ SFXIndexPopup::TabWidgets SFXIndexPopup::createTabWidgets() {
     widgets.resetToFirstPageBtn->setPosition({ widgets.layer->getContentSize().width / 2, widgets.layer->getContentSize().height / 2 - 28.f });
     widgets.errorMenu->addChild(widgets.resetToFirstPageBtn);
 
-    return widgets;
+    widgets.infoButton = nullptr;
+        widgets.lastErrorCode = "";
+        return widgets;
+}
+
+void SFXIndexPopup::onInfoButton(CCObject*) {
+    auto& widgets = widgetsForTab(m_activeTab);
+    std::string code = widgets.lastErrorCode;
+    size_t pos = code.find_first_of("-0123456789");
+    if (pos != std::string::npos) {
+        size_t end = pos;
+        if (code[end] == '-') ++end;
+        while (end < code.size() && isdigit(code[end])) ++end;
+        code = code.substr(pos, end - pos);
+    }
+    log::info("Info button pressed, error code: '{}'", code);
+    auto jsonPath = Mod::get()->getResourcesDir() / "curl-error-desc.json";
+    auto result = file::readJson(jsonPath);
+    std::string title = "Unknown", desc = "No description.";
+    if (result) {
+        auto root = result.unwrap();
+        std::vector<std::string> keys;
+        if (root.isObject()) {
+            for (auto it = root.begin(); it != root.end(); ++it) {
+                auto keyOpt = it->getKey();
+                if (keyOpt) keys.push_back(*keyOpt);
+            }
+        }
+        log::debug("Available error code keys in JSON: [{}]", fmt::join(keys, ", "));
+        if (root.contains(code)) {
+            auto entry = root[code];
+            if (entry.contains("title")) title = entry["title"].asString().unwrapOr("");
+            if (entry.contains("description")) desc = entry["description"].asString().unwrapOr("");
+        }
+    } else {
+        log::warn("Failed to load or parse curl-error-desc.json");
+    }
+    auto popupTitle = fmt::format("Error {}: {}", code, title);
+    MDPopup::create(popupTitle, desc, "OK")->show();
 }
 
 bool SFXIndexPopup::init(bool settingsEnabled) {
