@@ -2,10 +2,10 @@
 #include "Geode/utils/file.hpp"
 #include "SearchFilterPopup.hpp"
 #include "Geode/ui/GeodeUI.hpp"
-#include "SFXCell.hpp"
-#include "SFXPackCell.hpp"
-#include "../Requests.hpp"
-#include "../Utils.hpp"
+#include "../cell/SFXCell.hpp"
+#include "../cell/SFXPackCell.hpp"
+#include "../../Requests.hpp"
+#include "../../Utils.hpp"
 #include <Geode/ui/BasedButton.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
 
@@ -299,12 +299,18 @@ void SFXIndexPopup::onInfoButton(CCObject*) {
         log::debug("Available error code keys in JSON: [{}]", fmt::join(keys, ", "));
         if (root.contains(code)) {
             auto entry = root[code];
-            if (entry.contains("title")) title = entry["title"].asString().unwrapOr("");
-            if (entry.contains("description")) desc = entry["description"].asString().unwrapOr("");
+            if (entry.contains("title")) title = entry["title"].asString().unwrapOr("Unknown Error");
+            if (entry.contains("description")) desc = entry["description"].asString().unwrapOr(
+                "The error couldn't be found. "
+                "You may find information on **negative errors** [here](https://curl.se/libcurl/c/libcurl-errors.html), "
+                "and **positive (3-digit) errors** [here](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status). "
+                "If you need any assistance, feel free to contact us (the mod developers) on "
+                "[GitHub](https://github.com/rgc-exists/Custom-Death-Sound). Sorry for the inconvenience."
+            );
             if (entry.contains("credit") && entry["credit"].isObject()) {
                 auto credit = entry["credit"];
-                std::string author = credit.contains("author") ? credit["author"].asString().unwrapOr("") : "";
-                std::string link = credit.contains("link") ? credit["link"].asString().unwrapOr("") : "";
+                std::string author = credit.contains("author") ? credit["author"].asString().unwrapOr("Unknown Author") : "";
+                std::string link = credit.contains("link") ? credit["link"].asString().unwrapOr("https://example.com") : "";
                 if (!author.empty() && !link.empty()) {
                     desc += "\n\nDescription by [" + author + "](" + link + ").";
                 } else if (!author.empty()) {
@@ -998,7 +1004,7 @@ void SFXIndexPopup::openSfxFolder(CCObject*) {
     auto downloadDir = Mod::get()->getConfigDir() / "downloaded-sfx";
     std::error_code ec;
     std::filesystem::create_directories(downloadDir, ec);
-        utils::file::openFolder(geode::utils::string::pathToString(downloadDir));
+    utils::file::openFolder(geode::utils::string::pathToString(downloadDir));
 }
 
 void SFXIndexPopup::resetToFirstPage(CCObject*) {

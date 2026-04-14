@@ -1,6 +1,6 @@
 #include "SFXCell.hpp"
-#include "../Utils.hpp"
-#include "../Requests.hpp"
+#include "../../Utils.hpp"
+#include "../../Requests.hpp"
 #include <Geode/utils/web.hpp>
 
 namespace deathsounds {
@@ -86,9 +86,7 @@ namespace deathsounds {
         double lengthSeconds,
         matjson::Value sfxObject
     ) {
-        if (!CCLayer::init()) {
-            return false;
-        }
+        if (!CCLayer::init()) return false;
 
         m_sfxId = id;
         m_sfxUrl = url;

@@ -68,6 +68,12 @@ namespace deathsounds {
         DSRequest(const DSRequest&) = delete;
         DSRequest& operator=(const DSRequest&) = delete;
 
+    public:
+        void checkModToken(const std::string& token, std::function<void(const matjson::Value&)> onComplete, std::function<void(const matjson::Value&)> onError) {
+            std::vector<std::pair<std::string, std::string>> params = { {"token", token} };
+            makeGetRequest("/mod/check-token", params, std::move(onComplete), std::move(onError));
+        }
+
         async::TaskHolder<WebResponse> m_listener;
         async::TaskHolder<WebResponse> m_incrementListener;
 

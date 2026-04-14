@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.2.0
+
+- Added "Upload Sound" popup - fixes some issues for mobile users (hopefully)
+- Added admin tools in-game (don't spam pls)
+
 ## v2.1.0
 
 - Added error descriptions

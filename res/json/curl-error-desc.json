@@ -1,10 +1,10 @@
 {
     "0": {
-        "title": "CURLE_OK",
-        "description": "All fine. Proceed as usual.",
+        "title": "OK",
+        "description": "The request was successful. Wait... how did you get here??",
         "credit": {
-            "author": "cURL",
-            "link": "https://curl.se/libcurl/c/libcurl-errors.html"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "-1": {
@@ -1001,18 +1001,18 @@
     },
     "400": {
         "title": "Bad Request",
-        "description": "The server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing).",
+        "description": "Something in the mod sent a request to the server that didn't make sense or was missing important parts, so the server couldn't understand it. This is likely a bug in the mod - please report it [here](https://github.com/rgc-exists/Custom-Death-Sound/issues).",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "401": {
         "title": "Unauthorized",
-        "description": "Although the HTTP standard specifies \"unauthorized\", semantically this response means \"unauthenticated\". That is, the client must authenticate itself to get the requested response.",
+        "description": "You need to be signed in to Custom Death Sound to access this webpage.",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "402": {
@@ -1025,18 +1025,18 @@
     },
     "403": {
         "title": "Forbidden",
-        "description": "The client does not have access rights to the content; that is, it is unauthorized, so the server is refusing to give the requested resource. Unlike `401 Unauthorized`, the client's identity is known to the server.",
+        "description": "You don't have access to this resource. Please contact the [mod developer](https://github.com/rgc-exists/Custom-Death-Sound/issues) if you think this is a mistake.",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "404": {
         "title": "Not Found",
-        "description": "The server cannot find the requested resource. In the browser, this means the URL is not recognized. In an API, this can also mean that the endpoint is valid but the resource itself does not exist. Servers may also send this response instead of `403 Forbidden` to hide the existence of a resource from an unauthorized client. This response code is probably the most well known due to its frequent occurrence on the web.",
+        "description": "The webpage you tried to access doesn't exist. You most likely encountered this error by exceeding the page limit, in which case you click the \"Return to First Page\" button.\nIf this was not the case, please contact the [mod developer](https://github.com/rgc-exists/Custom-Death-Sound/issues) if you find this.",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "405": {
@@ -1209,10 +1209,10 @@
     },
     "429": {
         "title": "Too Many Requests",
-        "description": "The user has sent too many requests in a given amount of time ([rate limiting](https://developer.mozilla.org/en-US/docs/Glossary/Rate_limit)).",
+        "description": "You have been ratelimited by the server. Please try again in {seconds} seconds.\nTo prevent this in the future, please send fewer requests to our server.",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "431": {
@@ -1233,10 +1233,10 @@
     },
     "500": {
         "title": "Internal Server Error",
-        "description": "The server has encountered a situation it does not know how to handle. This error is generic, indicating that the server cannot find a more appropriate `5XX` status code to respond with.",
+        "description": "Something went wrong on the server while trying to process your request. This isn't your fault.",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "501": {
@@ -1257,10 +1257,10 @@
     },
     "503": {
         "title": "Service Unavailable",
-        "description": "The server is not ready to handle the request. Common causes are a server that is down for maintenance or that is overloaded. Note that together with this response, a user-friendly page explaining the problem should be sent. This response should be used for temporary conditions and the `[Retry-After](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Retry-After)` HTTP header should, if possible, contain the estimated time before the recovery of the service. The webmaster must also take care about the caching-related headers that are sent along with this response, as these temporary condition responses should usually not be cached.",
+        "description": "The server is currently down. This may either be because it's under maintenance, or the server is temporarily overloaded. Sorry for the inconvenience.",
         "credit": {
-            "author": "Mozilla Developer Network",
-            "link": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status"
+            "author": "OmgRod",
+            "link": "https://omgrod.me"
         }
     },
     "504": {

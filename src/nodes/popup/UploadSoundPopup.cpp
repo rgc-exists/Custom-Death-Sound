@@ -1,4 +1,4 @@
-#include "SearchFilterPopup.hpp"
+#include "UploadSoundPopup.hpp"
 
 namespace {
     std::string trim(std::string value) {
@@ -14,7 +14,7 @@ namespace {
     }
 }
 
-bool SearchFilterPopup::init(std::string query, bool recent, bool inUse, std::function<void(std::string, bool, bool)> onApply) {
+bool UploadSoundPopup::init(std::string query, bool recent, bool inUse, std::function<void(std::string, bool, bool)> onApply) {
     if (!Popup::init(280.f, 230.f)) {
         return false;
     }
@@ -59,7 +59,7 @@ bool SearchFilterPopup::init(std::string query, bool recent, bool inUse, std::fu
             offSprite,
             onSprite,
             this,
-            menu_selector(SearchFilterPopup::onRecentToggled)
+            menu_selector(UploadSoundPopup::onRecentToggled)
         );
         m_recentToggle->toggle(m_recent);
         m_recentToggle->setPosition({ m_mainLayer->getContentWidth() - 40.f, 88.f });
@@ -81,7 +81,7 @@ bool SearchFilterPopup::init(std::string query, bool recent, bool inUse, std::fu
                 inUseOffSprite,
                 inUseOnSprite,
                 this,
-                menu_selector(SearchFilterPopup::onInUseToggled)
+                menu_selector(UploadSoundPopup::onInUseToggled)
             );
         }
         if (m_inUseToggle) {
@@ -92,19 +92,19 @@ bool SearchFilterPopup::init(std::string query, bool recent, bool inUse, std::fu
     }
 
     auto clearSprite = ButtonSprite::create("Clear", "goldFont.fnt", "GJ_button_01.png", 0.7f);
-    auto clearBtn = CCMenuItemSpriteExtra::create(clearSprite, this, menu_selector(SearchFilterPopup::onClear));
+    auto clearBtn = CCMenuItemSpriteExtra::create(clearSprite, this, menu_selector(UploadSoundPopup::onClear));
     clearBtn->setPosition({ m_mainLayer->getContentWidth() / 2.f - 60.f, 24.f });
     menu->addChild(clearBtn);
 
     auto applySprite = ButtonSprite::create("Apply", "goldFont.fnt", "GJ_button_01.png", 0.7f);
-    auto applyBtn = CCMenuItemSpriteExtra::create(applySprite, this, menu_selector(SearchFilterPopup::onApplyPressed));
+    auto applyBtn = CCMenuItemSpriteExtra::create(applySprite, this, menu_selector(UploadSoundPopup::onApplyPressed));
     applyBtn->setPosition({ m_mainLayer->getContentWidth() / 2.f + 60.f, 24.f });
     menu->addChild(applyBtn);
 
     return true;
 }
 
-void SearchFilterPopup::applyAndClose() {
+void UploadSoundPopup::applyAndClose() {
     m_query = m_queryInput ? trim(m_queryInput->getString()) : "";
     if (m_onApply) {
         m_onApply(m_query, m_recent, m_inUse);
@@ -112,7 +112,7 @@ void SearchFilterPopup::applyAndClose() {
     onClose(nullptr);
 }
 
-void SearchFilterPopup::onClear(CCObject*) {
+void UploadSoundPopup::onClear(CCObject*) {
     m_query.clear();
     m_recent = false;
     m_inUse = false;
@@ -128,24 +128,24 @@ void SearchFilterPopup::onClear(CCObject*) {
     applyAndClose();
 }
 
-void SearchFilterPopup::onApplyPressed(CCObject*) {
+void UploadSoundPopup::onApplyPressed(CCObject*) {
     applyAndClose();
 }
 
-void SearchFilterPopup::onRecentToggled(CCObject*) {
+void UploadSoundPopup::onRecentToggled(CCObject*) {
     m_recent = m_recentToggle
         ? !m_recentToggle->isOn()
         : !m_recent;
 }
 
-void SearchFilterPopup::onInUseToggled(CCObject*) {
+void UploadSoundPopup::onInUseToggled(CCObject*) {
     m_inUse = m_inUseToggle
         ? !m_inUseToggle->isOn()
         : !m_inUse;
 }
 
-SearchFilterPopup* SearchFilterPopup::create(std::string query, bool recent, bool inUse, std::function<void(std::string, bool, bool)> onApply) {
-    auto ret = new SearchFilterPopup();
+UploadSoundPopup* UploadSoundPopup::create(std::string query, bool recent, bool inUse, std::function<void(std::string, bool, bool)> onApply) {
+    auto ret = new UploadSoundPopup();
     if (ret && ret->init(std::move(query), recent, inUse, std::move(onApply))) {
         ret->autorelease();
         return ret;

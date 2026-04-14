@@ -48,3 +48,10 @@ void CCLayerMultiplexR::switchTo(unsigned int index) {
     m_activeIndex = index;
     m_layers[m_activeIndex]->setVisible(true);
 }
+
+CCLayer* CCLayerMultiplexR::getLayer(size_t index) const {
+    if (index < m_layers.size()) {
+        return m_layers[index];
+    }
+    return nullptr;
+}

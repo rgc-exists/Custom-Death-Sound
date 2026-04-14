@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Border.hpp"
-#include "CCLayerMultiplexR.hpp"
-#include "geode/GeodeTabSprite.hpp"
+#include "../Border.hpp"
+#include "../cocos/CCLayerMultiplexR.hpp"
+#include "../geode/GeodeTabSprite.hpp"
 #include <Geode/Geode.hpp>
 
 using namespace geode::prelude;

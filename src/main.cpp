@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PauseLayer.hpp>
-#include "nodes/SFXIndexPopup.hpp"
+#include "nodes/popup/SFXIndexPopup.hpp"
 #include <Geode/utils/file.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>
 #include <Geode/modify/MenuLayer.hpp>

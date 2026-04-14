@@ -1,5 +1,5 @@
 #include "SFXPackCell.hpp"
-#include "../Requests.hpp"
+#include "../../Requests.hpp"
 #include <Geode/ui/Notification.hpp>
 #include <Geode/utils/web.hpp>
 

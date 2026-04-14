@@ -1,14 +1,14 @@
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/loader/Mod.hpp>
-#include "nodes/SFXIndexPopup.hpp"
+#include "nodes/popup/RequestAdminPopup.hpp"
 
 using namespace geode::prelude;
 
-class MyButtonSettingV3 : public SettingV3 {
+class ReqAdminButtonSettingV3 : public SettingV3 {
 public:
     static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID, matjson::Value const& json) {
-        auto res = std::make_shared<MyButtonSettingV3>();
-        auto root = checkJson(json, "MyButtonSettingV3");
+        auto res = std::make_shared<ReqAdminButtonSettingV3>();
+        auto root = checkJson(json, "ReqAdminButtonSettingV3");
 
         res->init(key, modID, root);
         res->parseNameAndDescription(root);
@@ -33,19 +33,19 @@ public:
     SettingNodeV3* createNode(float width) override;
 };
 
-class MyButtonSettingNodeV3 : public SettingNodeV3 {
+class ReqAdminButtonSettingNodeV3 : public SettingNodeV3 {
 protected:
     ButtonSprite* m_buttonSprite;
     CCMenuItemSpriteExtra* m_button;
 
-    bool init(std::shared_ptr<MyButtonSettingV3> setting, float width) {
+    bool init(std::shared_ptr<ReqAdminButtonSettingV3> setting, float width) {
         if (!SettingNodeV3::init(setting, width))
             return false;
         
-        m_buttonSprite = ButtonSprite::create("Open", "goldFont.fnt", "GJ_button_01.png", .8f);
+        m_buttonSprite = ButtonSprite::create("Req", "bigFont.fnt", "GJ_button_04.png", .8f);
         m_buttonSprite->setScale(.5f);
         m_button = CCMenuItemSpriteExtra::create(
-            m_buttonSprite, this, menu_selector(MyButtonSettingNodeV3::onButton)
+            m_buttonSprite, this, menu_selector(ReqAdminButtonSettingNodeV3::onButton)
         );
         this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
         this->getButtonMenu()->setContentWidth(60);
@@ -67,15 +67,15 @@ protected:
         m_buttonSprite->setColor(shouldEnable ? ccWHITE : ccGRAY);
     }
     void onButton(CCObject*) {
-        SFXIndexPopup::create(false)->show();
+        RequestAdminPopup::create()->show();
     }
 
     void onCommit() override {}
     void onResetToDefault() override {}
 
 public:
-    static MyButtonSettingNodeV3* create(std::shared_ptr<MyButtonSettingV3> setting, float width) {
-        auto ret = new MyButtonSettingNodeV3();
+    static ReqAdminButtonSettingNodeV3* create(std::shared_ptr<ReqAdminButtonSettingV3> setting, float width) {
+        auto ret = new ReqAdminButtonSettingNodeV3();
         if (ret->init(setting, width)) {
             ret->autorelease();
             return ret;
@@ -91,18 +91,18 @@ public:
         return false;
     }
 
-    std::shared_ptr<MyButtonSettingV3> getSetting() const {
-        return std::static_pointer_cast<MyButtonSettingV3>(SettingNodeV3::getSetting());
+    std::shared_ptr<ReqAdminButtonSettingV3> getSetting() const {
+        return std::static_pointer_cast<ReqAdminButtonSettingV3>(SettingNodeV3::getSetting());
     }
 };
 
-SettingNodeV3* MyButtonSettingV3::createNode(float width) {
-    return MyButtonSettingNodeV3::create(
-        std::static_pointer_cast<MyButtonSettingV3>(shared_from_this()),
+SettingNodeV3* ReqAdminButtonSettingV3::createNode(float width) {
+    return ReqAdminButtonSettingNodeV3::create(
+        std::static_pointer_cast<ReqAdminButtonSettingV3>(shared_from_this()),
         width
     );
 }
 
 $execute {
-    (void)Mod::get()->registerCustomSettingType("button", &MyButtonSettingV3::parse);
+    (void)Mod::get()->registerCustomSettingType("req-admin-btn", &ReqAdminButtonSettingV3::parse);
 }

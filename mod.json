@@ -25,7 +25,7 @@
 	},
 	"settings": {
 		"online-library-button": {
-			"type": "custom:button",
+			"type": "custom:library-btn",
 			"name": "Online Library"
 		},
 		"death-sound-enabled": {
@@ -127,6 +127,16 @@
 		"misc-title": {
 			"name": "Miscellaneous Settings",
 			"type": "title"
+		},
+		"req-admin-button": {
+			"name": "Check Admin",
+			"type": "custom:req-admin-btn"
+		},
+		"account-token": {
+			"name": "Account Token",
+			"type": "string",
+			"description": "You only need this if you are a CDS admin.",
+			"default": ""
 		}
 	},
 	"dependencies": {
