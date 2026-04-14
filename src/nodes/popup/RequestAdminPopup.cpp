@@ -47,6 +47,19 @@ bool RequestAdminPopup::init() {
     requestNotice->setPosition({ 160.f, 200.f });
     requestLayer->addChild(requestNotice);
 
+    auto requestMenu = CCMenu::create();
+    requestMenu->setContentSize(requestLayer->getContentSize());
+    requestMenu->setPosition({ 0.f, 0.f });
+    requestLayer->addChild(requestMenu);
+
+    auto requestButton = CCMenuItemSpriteExtra::create(
+        ButtonSprite::create("Request"),
+        this,
+        menu_selector(RequestAdminPopup::onRequest)
+    );
+    requestButton->setPosition({ 160.f, 60.f });
+    requestMenu->addChild(requestButton);
+
     auto verifyStartNotice = CCLabelBMFont::create(
         "You are not logged in yet. "
         "Please click the button below to log in. ",
@@ -118,6 +131,81 @@ void RequestAdminPopup::onVerify(CCObject* sender) {
     auto serverURL = Mod::get()->getSettingValue<std::string>("server-url");
     CCApplication::get()->openURL(fmt::format("{}/verify", serverURL).c_str());
     this->m_multiplex->switchTo(1);
+}
+
+void RequestAdminPopup::onRequest(CCObject* sender) {
+    std::string token = Mod::get()->getSettingValue<std::string>("account-token");
+    std::string baseUrl = Mod::get()->getSettingValue<std::string>("server-url");
+    std::string url = baseUrl + "/auth/is-admin";
+
+    if (!token.empty()) {
+        url += "?token=" + token;
+    }
+
+    auto req = geode::utils::web::WebRequest();
+    req.timeout(std::chrono::seconds(15));
+    if (!token.empty()) {
+        req.header("x-account-token", token);
+    }
+
+    auto loadingCircle = LoadingSpinner::create(100.f);
+    loadingCircle->setAnchorPoint({ 0.5f, 0.5f });
+    loadingCircle->setPosition({ 160.f, 100.f });
+    m_multiplex->getLayer(2)->addChild(loadingCircle, 9999, 9999);
+
+    static async::TaskHolder<geode::utils::web::WebResponse> s_adminCheckListener;
+    s_adminCheckListener.spawn(
+        req.get(url),
+        [this, loadingCircle](geode::utils::web::WebResponse value) {
+        if (loadingCircle && loadingCircle->getParent()) loadingCircle->removeFromParent();
+        bool isAdmin = false;
+        std::string errorMsg;
+        if (value.ok()) {
+            auto jsonOpt = value.json();
+            if (jsonOpt.isOk()) {
+                auto json = jsonOpt.unwrap();
+                if (json.contains("isAdmin") && json["isAdmin"].isBool()) {
+                    auto isAdminResult = json["isAdmin"].asBool();
+                    if (isAdminResult.isOk()) {
+                        isAdmin = isAdminResult.unwrap();
+                    } else {
+                        errorMsg = "Malformed response from server.";
+                    }
+                } else {
+                    errorMsg = "Malformed response from server.";
+                }
+            } else {
+                errorMsg = value.string().unwrap();
+            }
+        } else {
+            errorMsg = "Request failed with code " + std::to_string(value.code());
+        }
+
+        // Save admin status
+        Mod::get()->setSettingValue("is-admin", isAdmin);
+
+        if (!errorMsg.empty()) {
+            auto failPopup = FLAlertLayer::create("Admin Check Failed", errorMsg, "OK");
+            failPopup->show();
+            return;
+        }
+
+        if (isAdmin) {
+            auto successPopup = FLAlertLayer::create(
+                "Request",
+                "You are an admin. You may upload or delete sounds and sound packs.",
+                "OK"
+            );
+            successPopup->show();
+        } else {
+            auto failPopup = FLAlertLayer::create(
+                "Not Admin",
+                "You are not an admin. Admin features are unavailable.",
+                "OK"
+            );
+            failPopup->show();
+        }
+    });
 }
 
 void RequestAdminPopup::onLogin(CCObject* sender) {

@@ -12,6 +12,7 @@ public:
     bool init();
     void onVerify(CCObject*);
     void onLogin(CCObject*);
+    void onRequest(CCObject*);
     void isLoggedIn(std::function<void(bool)> callback);
     static RequestAdminPopup* create();
 };
