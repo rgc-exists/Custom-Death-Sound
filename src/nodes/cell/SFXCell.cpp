@@ -1,9 +1,8 @@
 #include "SFXCell.hpp"
 #include "../../Utils.hpp"
-#include "../popup/EditSFXPopup.hpp"
-#include "../popup/EditSFXPopup.hpp"
 #include "../../Requests.hpp"
 #include <Geode/utils/web.hpp>
+#include "../popup/EditSFXPopup.hpp"
 
 std::unordered_set<std::string> s_downloadedSfx;
 
@@ -75,6 +74,11 @@ TagBadgeInfo getTagBadgeInfo(int badgeId) {
             "<cy>Featured</c> means the audio was recommended by an <cg>admin</c> of <cr>Custom Death Sound</c>."
         };
     }
+
+    return {
+        "Unknown Tag",
+        "This tag is not yet available in GD."
+    };
 }
 
 bool SFXCell::init(

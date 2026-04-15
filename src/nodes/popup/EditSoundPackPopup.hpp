@@ -1,6 +1,9 @@
 #pragma once
+
 #include <Geode/Geode.hpp>
 #include "../cell/SFXPackCell.hpp"
+
+using namespace geode::prelude;
 
 class EditSoundPackPopup : public geode::Popup {
 public:

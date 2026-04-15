@@ -190,7 +190,7 @@ void reloadSelectedOnlineSounds() {
 	}
 	selectedOnlineSounds.clear();
 
-	auto selected = utils::getUsedOnlineSfxPaths();
+	auto selected = dsutils::getUsedOnlineSfxPaths();
 	selectedOnlineSoundPaths = selected;
 
 	for (auto const& pathStr : selected) {
@@ -219,7 +219,7 @@ void reloadSelectedOnlineSounds() {
 }
 
 void refreshSelectedOnlineSoundsIfNeeded() {
-	auto selected = utils::getUsedOnlineSfxPaths();
+	auto selected = dsutils::getUsedOnlineSfxPaths();
 	if (selected == selectedOnlineSoundPaths) {
 		return;
 	}

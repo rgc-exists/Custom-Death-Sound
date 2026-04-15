@@ -532,8 +532,8 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
             auto sfxUrl = sfxItem["url"].asString().unwrap();
 
             if (m_onlineInUse) {
-                auto path = utils::getSfxDownloadPath(sfxId, sfxUrl);
-                if (!std::filesystem::exists(path) || !utils::isOnlineSfxPathUsed(path)) {
+                auto path = dsutils::getSfxDownloadPath(sfxId, sfxUrl);
+                if (!std::filesystem::exists(path) || !dsutils::isOnlineSfxPathUsed(path)) {
                     continue;
                 }
             }
@@ -584,7 +584,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
     auto const& packs = result.contains("data") ? result["data"] : result;
 
     auto resolvePackSoundPath = [](std::string const& soundId) {
-        auto fallback = utils::getSfxDownloadPath(soundId, std::string("/sounds/") + std::string(soundId) + ".wav");
+        auto fallback = dsutils::getSfxDownloadPath(soundId, std::string("/sounds/") + std::string(soundId) + ".wav");
         if (std::filesystem::exists(fallback)) {
             return fallback;
         }
@@ -609,7 +609,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                 continue;
             }
 
-            auto metadata = utils::getDownloadedSfxMetadata(path);
+            auto metadata = dsutils::getDownloadedSfxMetadata(path);
             if (metadata.id == soundId) {
                 return path;
             }
@@ -645,7 +645,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                 bool allUsed = !soundIds.empty();
                 for (auto const& soundId : soundIds) {
                     auto path = resolvePackSoundPath(soundId);
-                    if (!std::filesystem::exists(path) || !utils::isOnlineSfxPathUsed(path)) {
+                    if (!std::filesystem::exists(path) || !dsutils::isOnlineSfxPathUsed(path)) {
                         allUsed = false;
                         break;
                     }
@@ -723,8 +723,8 @@ void SFXIndexPopup::showDownloadedResults() {
     populateTabRows(widgets, [&](int& index, float& totalHeight) {
         for (int i = startIdx; i < endIdx; ++i) {
             auto const& path = downloadedFiles[i];
-            auto metadata = utils::getDownloadedSfxMetadata(path);
-            auto metadataPath = utils::getSfxMetadataPath(path);
+            auto metadata = dsutils::getDownloadedSfxMetadata(path);
+            auto metadataPath = dsutils::getSfxMetadataPath(path);
             if (!std::filesystem::exists(metadataPath)) {
                     auto fallbackName = geode::utils::string::pathToString(path.filename());
                 metadata.id = fallbackName;

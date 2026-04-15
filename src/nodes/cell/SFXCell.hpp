@@ -4,7 +4,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include "../../Utils.hpp"
-#include "../popup/EditSFXPopup.hpp"
+
 
 using namespace geode::prelude;
 

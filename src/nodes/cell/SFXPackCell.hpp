@@ -1,8 +1,7 @@
 #pragma once
 
 #include "SFXCell.hpp"
-#include "../popup/EditSoundPackPopup.hpp"
-#include "../popup/EditSoundPackPopup.hpp"
+
 
 class SFXPackCell : public SFXCell {
 public:

@@ -1,9 +1,8 @@
 #include "SFXPackCell.hpp"
 #include "../../Requests.hpp"
-#include "../popup/EditSoundPackPopup.hpp"
-#include "../popup/EditSoundPackPopup.hpp"
 #include <Geode/ui/Notification.hpp>
 #include <Geode/utils/web.hpp>
+#include "../popup/EditSoundPackPopup.hpp"
 
 namespace {
     constexpr auto kEnabledPackIdsKey = "enabled-online-pack-ids";
@@ -310,7 +309,7 @@ std::string SFXPackCell::formatCountCompact(int value) {
 }
 
 std::filesystem::path SFXPackCell::resolveSoundPath(std::string const& soundId) const {
-    auto fallback = utils::getSfxDownloadPath(soundId, makeSoundRelativeUrl(soundId));
+    auto fallback = dsutils::getSfxDownloadPath(soundId, makeSoundRelativeUrl(soundId));
     if (std::filesystem::exists(fallback)) {
         return fallback;
     }
@@ -335,7 +334,7 @@ std::filesystem::path SFXPackCell::resolveSoundPath(std::string const& soundId) 
             continue;
         }
 
-        auto metadata = utils::getDownloadedSfxMetadata(path);
+        auto metadata = dsutils::getDownloadedSfxMetadata(path);
         if (metadata.id == soundId) {
             return path;
         }
@@ -395,7 +394,7 @@ void SFXPackCell::recomputePackStateFromSounds(bool forceStateUpdate) {
             );
         }
 
-        if (!utils::isOnlineSfxPathUsed(path)) {
+        if (!dsutils::isOnlineSfxPathUsed(path)) {
             allEnabled = false;
         }
     }
@@ -524,21 +523,21 @@ void SFXPackCell::startSoundDownload(std::string const& soundId, std::string con
         return;
     }
 
-    auto outPath = utils::getSfxDownloadPath(soundId, candidates.front());
+    auto out_path = dsutils::getSfxDownloadPath(soundId, candidates.front());
     log::info(
         "Output path for '{}' ({}) -> {}",
         displayName,
         soundId,
-        geode::utils::string::pathToString(outPath)
+        geode::utils::string::pathToString(out_path)
     );
     std::error_code ec;
-    std::filesystem::create_directories(outPath.parent_path(), ec);
+    std::filesystem::create_directories(out_path.parent_path(), ec);
     if (ec) {
         log::error(
             "Failed to create output directory for '{}' ({}) at {}: {}",
             displayName,
             soundId,
-            geode::utils::string::pathToString(outPath.parent_path()),
+            geode::utils::string::pathToString(out_path.parent_path()),
             ec.message()
         );
         ++m_failedCount;
@@ -564,7 +563,7 @@ void SFXPackCell::tryDownloadSound(std::string const& soundId, std::string const
         return;
     }
 
-    auto url = utils::makeSfxDownloadUrl(candidates[candidateIndex]);
+    auto url = dsutils::makeSfxDownloadUrl(candidates[candidateIndex]);
     if (url.empty()) {
         log::warn(
             "Candidate {} for '{}' ({}) normalized to empty URL: {}",
@@ -588,11 +587,11 @@ void SFXPackCell::tryDownloadSound(std::string const& soundId, std::string const
     web::WebRequest req;
     req.timeout(std::chrono::seconds(20));
 
-    auto aliveToken = m_aliveToken;
+    auto alive_token = m_aliveToken;
     m_packDownloadTask.spawn(
         req.get(url),
-        [this, soundId, displayName, candidates, candidateIndex, aliveToken, url](web::WebResponse value) {
-            if (!aliveToken || !*aliveToken) {
+        [this, soundId, displayName, candidates, candidateIndex, alive_token, url](web::WebResponse value) {
+            if (!alive_token || !*alive_token) {
                 return;
             }
 
@@ -613,15 +612,15 @@ void SFXPackCell::tryDownloadSound(std::string const& soundId, std::string const
                 return;
             }
 
-            auto outPath = utils::getSfxDownloadPath(soundId, candidates[candidateIndex]);
-            auto writeResult = value.into(outPath);
-            if (!writeResult.isOk()) {
+            auto out_path = dsutils::getSfxDownloadPath(soundId, candidates[candidateIndex]);
+            auto write_result = value.into(out_path);
+            if (!write_result.isOk()) {
                 log::error(
                     "Failed to write '{}' ({}) candidate {} to {}",
                     displayName,
                     soundId,
                     candidateIndex,
-                    geode::utils::string::pathToString(outPath)
+                    geode::utils::string::pathToString(out_path)
                 );
                 tryDownloadSound(soundId, displayName, candidates, candidateIndex + 1);
                 return;
@@ -632,9 +631,9 @@ void SFXPackCell::tryDownloadSound(std::string const& soundId, std::string const
                 displayName,
                 soundId,
                 candidateIndex,
-                geode::utils::string::pathToString(outPath)
+                geode::utils::string::pathToString(out_path)
             );
-            utils::saveDownloadedSfxMetadata(outPath, soundId, displayName);
+            dsutils::saveDownloadedSfxMetadata(out_path, soundId, displayName);
             ++m_downloadedCount;
             notifyProgress(
                 fmt::format("Downloaded {} [{} / {}]", displayName, m_downloadIndex, m_soundIds.size()),
@@ -647,8 +646,8 @@ void SFXPackCell::tryDownloadSound(std::string const& soundId, std::string const
 }
 
 void SFXPackCell::downloadNextSound() {
-    auto aliveToken = m_aliveToken;
-    if (!aliveToken || !*aliveToken) {
+    auto alive_token = m_aliveToken;
+    if (!alive_token || !*alive_token) {
         return;
     }
 
@@ -704,7 +703,7 @@ void SFXPackCell::downloadNextSound() {
         m_name,
         m_sfxId
     );
-    auto sfxInfoUrl = utils::makeSfxDownloadUrl(std::string("/sfx/") + soundId);
+    auto sfxInfoUrl = dsutils::makeSfxDownloadUrl(std::string("/sfx/") + soundId);
     if (sfxInfoUrl.empty()) {
         log::error("Cannot resolve metadata URL for '{}' ({})", m_name, soundId);
         ++m_failedCount;
@@ -725,8 +724,8 @@ void SFXPackCell::downloadNextSound() {
     req.timeout(std::chrono::seconds(30));
     m_sfxInfoTask.spawn(
         req.get(sfxInfoUrl),
-        [this, soundId, aliveToken](web::WebResponse response) {
-            if (!aliveToken || !*aliveToken) {
+        [this, soundId, alive_token](web::WebResponse response) {
+            if (!alive_token || !*alive_token) {
                 return;
             }
 
@@ -805,7 +804,7 @@ void SFXPackCell::setPackUsageEnabled(bool enabled) {
     if (enabled) {
         registerPackUsage(m_sfxId, m_soundIds);
         for (auto const& soundId : m_soundIds) {
-            utils::setOnlineSfxPathUsed(resolveSoundPath(soundId), true);
+            dsutils::setOnlineSfxPathUsed(resolveSoundPath(soundId), true);
         }
         return;
     }
@@ -818,13 +817,13 @@ void SFXPackCell::disablePackSoundsRespectingOtherPacks() {
         m_soundIds = getDownloadedPackSoundIds(m_sfxId);
     }
 
-    auto stillNeededByOtherPacks = collectOtherEnabledPackSounds(m_sfxId);
+    auto still_needed_by_other_packs = collectOtherEnabledPackSounds(m_sfxId);
     unregisterPackUsage(m_sfxId);
 
     for (auto const& soundId : m_soundIds) {
         auto path = resolveSoundPath(soundId);
-        if (stillNeededByOtherPacks.find(static_cast<std::string>(soundId)) == stillNeededByOtherPacks.end()) {
-            utils::setOnlineSfxPathUsed(path, false);
+        if (still_needed_by_other_packs.find(static_cast<std::string>(soundId)) == still_needed_by_other_packs.end()) {
+            dsutils::setOnlineSfxPathUsed(path, false);
         }
     }
 }
@@ -865,11 +864,11 @@ void SFXPackCell::onInfoPressed(CCObject*) {
                     ++missing;
                 }
 
-                auto convertedPath = path;
-                convertedPath += ".16.wav";
-                std::filesystem::remove(convertedPath, ec);
+                auto converted_path = path;
+                converted_path += ".16.wav";
+                std::filesystem::remove(converted_path, ec);
 
-                utils::removeDownloadedSfxMetadata(path);
+                dsutils::removeDownloadedSfxMetadata(path);
             }
 
             disablePackSoundsRespectingOtherPacks();
