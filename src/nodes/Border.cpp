@@ -26,7 +26,7 @@ bool DSBorder::init(CCNode* node, const ccColor4B& backgroundColor, const CCSize
         return false;
     }
 
-    CCScale9Sprite* border = CCScale9Sprite::create("sfxListDSBorder.png"_spr);
+    CCScale9Sprite* border = CCScale9Sprite::create("sfxListBorder.png"_spr);
     CCLayer* content = CCLayer::create();
 
     border->setID("border_sprite"_spr);
