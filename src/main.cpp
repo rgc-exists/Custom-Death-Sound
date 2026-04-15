@@ -164,7 +164,7 @@ namespace {
 }
 
 std::filesystem::path transcodeLoadedSoundIfNeeded(std::filesystem::path const& originalPath) {
-	return deathsounds::utils::ensurePlayableSfxPath(originalPath);
+	return dsutils::ensurePlayableSfxPath(originalPath);
 }
 
 bool pathMatchesCue(gd::string const& path, std::string_view cue) {
@@ -190,7 +190,7 @@ void reloadSelectedOnlineSounds() {
 	}
 	selectedOnlineSounds.clear();
 
-	auto selected = deathsounds::utils::getUsedOnlineSfxPaths();
+	auto selected = utils::getUsedOnlineSfxPaths();
 	selectedOnlineSoundPaths = selected;
 
 	for (auto const& pathStr : selected) {
@@ -219,7 +219,7 @@ void reloadSelectedOnlineSounds() {
 }
 
 void refreshSelectedOnlineSoundsIfNeeded() {
-	auto selected = deathsounds::utils::getUsedOnlineSfxPaths();
+	auto selected = utils::getUsedOnlineSfxPaths();
 	if (selected == selectedOnlineSoundPaths) {
 		return;
 	}

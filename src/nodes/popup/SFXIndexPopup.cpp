@@ -241,7 +241,7 @@ SFXIndexPopup::TabWidgets SFXIndexPopup::createTabWidgets() {
     widgets.list->setPosition({ 0.f, 0.f });
     widgets.clipping->addChild(widgets.list);
 
-    widgets.border = deathsounds::Border::create(widgets.list, { 75, 75, 75, 255 }, { 340.f, 220.f });
+    widgets.border = DSBorder::create(widgets.list, { 75, 75, 75, 255 }, { 340.f, 220.f });
     widgets.border->setPosition({ 0.f, 0.f });
     widgets.border->setVisible(false);
     widgets.clipping->addChild(widgets.border);
@@ -532,8 +532,8 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
             auto sfxUrl = sfxItem["url"].asString().unwrap();
 
             if (m_onlineInUse) {
-                auto path = deathsounds::utils::getSfxDownloadPath(sfxId, sfxUrl);
-                if (!std::filesystem::exists(path) || !deathsounds::utils::isOnlineSfxPathUsed(path)) {
+                auto path = utils::getSfxDownloadPath(sfxId, sfxUrl);
+                if (!std::filesystem::exists(path) || !utils::isOnlineSfxPathUsed(path)) {
                     continue;
                 }
             }
@@ -547,7 +547,7 @@ void SFXIndexPopup::showOnlineResults(const matjson::Value& result) {
                 }
             }
 
-            auto cell = deathsounds::SFXCell::create(
+            auto cell = SFXCell::create(
                 index,
                 sfxId,
                 sfxItem["name"].asString().unwrap(),
@@ -584,7 +584,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
     auto const& packs = result.contains("data") ? result["data"] : result;
 
     auto resolvePackSoundPath = [](std::string const& soundId) {
-        auto fallback = deathsounds::utils::getSfxDownloadPath(soundId, std::string("/sounds/") + std::string(soundId) + ".wav");
+        auto fallback = utils::getSfxDownloadPath(soundId, std::string("/sounds/") + std::string(soundId) + ".wav");
         if (std::filesystem::exists(fallback)) {
             return fallback;
         }
@@ -609,7 +609,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                 continue;
             }
 
-            auto metadata = deathsounds::utils::getDownloadedSfxMetadata(path);
+            auto metadata = utils::getDownloadedSfxMetadata(path);
             if (metadata.id == soundId) {
                 return path;
             }
@@ -645,7 +645,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                 bool allUsed = !soundIds.empty();
                 for (auto const& soundId : soundIds) {
                     auto path = resolvePackSoundPath(soundId);
-                    if (!std::filesystem::exists(path) || !deathsounds::utils::isOnlineSfxPathUsed(path)) {
+                    if (!std::filesystem::exists(path) || !utils::isOnlineSfxPathUsed(path)) {
                         allUsed = false;
                         break;
                     }
@@ -666,7 +666,7 @@ void SFXIndexPopup::showPackResults(const matjson::Value& result) {
                 createdAt = static_cast<int32_t>(packItem["createdAt"].asInt().unwrapOr(0));
             }
 
-            auto cell = deathsounds::SFXPackCell::create(index, id, name, soundIds, downloads, createdAt);
+            auto cell = SFXPackCell::create(index, id, name, soundIds, downloads, createdAt);
             cell->validateDownloadState();
             widgets.list->m_contentLayer->addChild(cell);
             totalHeight += cell->getContentHeight();
@@ -723,15 +723,15 @@ void SFXIndexPopup::showDownloadedResults() {
     populateTabRows(widgets, [&](int& index, float& totalHeight) {
         for (int i = startIdx; i < endIdx; ++i) {
             auto const& path = downloadedFiles[i];
-            auto metadata = deathsounds::utils::getDownloadedSfxMetadata(path);
-            auto metadataPath = deathsounds::utils::getSfxMetadataPath(path);
+            auto metadata = utils::getDownloadedSfxMetadata(path);
+            auto metadataPath = utils::getSfxMetadataPath(path);
             if (!std::filesystem::exists(metadataPath)) {
                     auto fallbackName = geode::utils::string::pathToString(path.filename());
                 metadata.id = fallbackName;
                 metadata.name = fallbackName;
                     metadata.path = geode::utils::string::pathToString(std::filesystem::absolute(path));
             }
-            auto cell = deathsounds::SFXCell::create(
+            auto cell = SFXCell::create(
                 index,
                 metadata.id,
                 metadata.name,
@@ -904,7 +904,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
 
     if (requestedTab == Tab::OnlineSounds) {
         if (usingSearchQuery) {
-            deathsounds::DSRequest::get()->searchSFX(
+            DSRequest::get()->searchSFX(
                 query,
                 100,
                 onSuccess,
@@ -913,7 +913,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
             return;
         }
 
-        deathsounds::DSRequest::get()->getTopSFXList(
+        DSRequest::get()->getTopSFXList(
             requestedPage,
             recent,
             onSuccess,
@@ -923,7 +923,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
     }
 
     if (usingSearchQuery) {
-        deathsounds::DSRequest::get()->searchPacks(
+        DSRequest::get()->searchPacks(
             query,
             100,
             onSuccess,
@@ -932,7 +932,7 @@ void SFXIndexPopup::refreshPage(CCObject*) {
         return;
     }
 
-    deathsounds::DSRequest::get()->getTopPacksList(
+    DSRequest::get()->getTopPacksList(
         requestedPage,
         recent,
         onSuccess,

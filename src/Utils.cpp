@@ -7,7 +7,7 @@
 #include <iterator>
 #include <vector>
 
-namespace deathsounds::utils {
+namespace dsutils {
     namespace {
         constexpr auto kUsedOnlineSfxPathsKey = "used-online-sfx-paths";
 
@@ -420,7 +420,7 @@ namespace deathsounds::utils {
 
         if (!std::filesystem::exists(originalPath)) {
             auto absPath = std::filesystem::absolute(originalPath);
-            log::warn("[SFX Preview] File missing for '{}' ({}) at {}:1", sfxName, sfxId, geode::utils::string::pathToString(absPath));
+            log::warn("File missing for '{}' ({}) at {}:1", sfxName, sfxId, geode::utils::string::pathToString(absPath));
             return false;
         }
 
@@ -444,7 +444,7 @@ namespace deathsounds::utils {
             auto convertedPath = originalPath;
             convertedPath += ".16.wav";
             if (ensurePcm16WavFromAnyAudio(originalPath, convertedPath)) {
-                log::info("[SFX Preview] Converted audio for '{}' ({}) -> {}:1", sfxName, sfxId, geode::utils::string::pathToString(std::filesystem::absolute(convertedPath)));
+                log::info("Converted audio for '{}' ({}) -> {}:1", sfxName, sfxId, geode::utils::string::pathToString(std::filesystem::absolute(convertedPath)));
                 auto convertedPathString = geode::utils::string::pathToString(convertedPath);
                 createResult = fmod->m_system->createSound(convertedPathString.c_str(), FMOD_DEFAULT, nullptr, &state.sound);
                 if (createResult == FMOD_OK) {
@@ -456,14 +456,14 @@ namespace deathsounds::utils {
         }
 
         if (createResult != FMOD_OK) {
-            log::error("[SFX Preview] createSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(createResult), geode::utils::string::pathToString(absSoundPath));
+            log::error("createSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(createResult), geode::utils::string::pathToString(absSoundPath));
             state.sound = nullptr;
             return false;
         }
 
         FMOD_RESULT playResult = fmod->m_system->playSound(state.sound, nullptr, false, &state.channel);
         if (playResult != FMOD_OK) {
-            log::error("[SFX Preview] playSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(playResult), geode::utils::string::pathToString(absSoundPath));
+            log::error("playSound failed '{}' ({}) result={} path={}:1", sfxName, sfxId, static_cast<int>(playResult), geode::utils::string::pathToString(absSoundPath));
             state.sound->release();
             state.sound = nullptr;
             state.channel = nullptr;
@@ -471,7 +471,7 @@ namespace deathsounds::utils {
         }
 
         state.playing = true;
-        log::info("[SFX Preview] Playing '{}' ({}) from {}:1", sfxName, sfxId, geode::utils::string::pathToString(absSoundPath));
+        log::info("Playing '{}' ({}) from {}:1", sfxName, sfxId, geode::utils::string::pathToString(absSoundPath));
         return true;
     }
 

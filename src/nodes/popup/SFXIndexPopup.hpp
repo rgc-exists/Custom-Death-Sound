@@ -18,7 +18,7 @@ private:
     struct TabWidgets {
         CCLayer* layer = nullptr;
         LoadingSpinner* loading = nullptr;
-        deathsounds::Border* border = nullptr;
+        DSBorder* border = nullptr;
         ScrollLayer* list = nullptr;
         CCLabelBMFont* error = nullptr;
         CCMenu* errorMenu = nullptr;

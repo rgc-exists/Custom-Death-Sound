@@ -181,8 +181,7 @@ void RequestAdminPopup::onRequest(CCObject* sender) {
             errorMsg = "Request failed with code " + std::to_string(value.code());
         }
 
-        // Save admin status
-        Mod::get()->setSettingValue("is-admin", isAdmin);
+        Mod::get()->setSavedValue("is-admin", isAdmin);
 
         if (!errorMsg.empty()) {
             auto failPopup = FLAlertLayer::create("Admin Check Failed", errorMsg, "OK");
@@ -230,7 +229,7 @@ void RequestAdminPopup::onLogin(CCObject* sender) {
 
 void RequestAdminPopup::isLoggedIn(std::function<void(bool)> callback) {
     auto accountToken = Mod::get()->getSettingValue<std::string>("account-token");
-    auto requests = deathsounds::DSRequest::get();
+    auto requests = DSRequest::get();
     if (accountToken == "") {
         callback(false);
         return;

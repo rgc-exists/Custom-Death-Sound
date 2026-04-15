@@ -6,7 +6,7 @@
 
 using namespace geode::prelude;
 
-namespace deathsounds::utils {
+namespace dsutils {
     struct DownloadedSfxMetadata {
         std::string id;
         std::string name;

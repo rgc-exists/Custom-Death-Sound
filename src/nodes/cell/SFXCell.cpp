@@ -1,633 +1,662 @@
 #include "SFXCell.hpp"
 #include "../../Utils.hpp"
+#include "../popup/EditSFXPopup.hpp"
+#include "../popup/EditSFXPopup.hpp"
 #include "../../Requests.hpp"
 #include <Geode/utils/web.hpp>
 
-namespace deathsounds {
-    namespace {
-        std::unordered_set<std::string> s_downloadedSfx;
+std::unordered_set<std::string> s_downloadedSfx;
 
-        enum TagBadgeId {
-            TagBadgeLong = 1001,
-            TagBadgeLoud = 1002,
+enum TagBadgeId {
+    TagBadgeLong = 1001,
+    TagBadgeLoud = 1002,
+    TagBadgeFeatured = 1003,
+};
+
+std::string normalizeTag(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return value;
+}
+
+std::vector<std::string> normalizeAndOrderTags(std::vector<std::string> tags) {
+    bool hasLong = false;
+    bool hasLoud = false;
+
+    for (auto const& tag : tags) {
+        auto normalized = normalizeTag(static_cast<std::string>(tag));
+        if (normalized == "long") {
+            hasLong = true;
+        } else if (normalized == "loud") {
+            hasLoud = true;
+        }
+    }
+
+    std::vector<std::string> ordered;
+    if (hasLong) ordered.push_back("long");
+    if (hasLoud) ordered.push_back("loud");
+    return ordered;
+}
+
+std::string formatLengthSeconds(double lengthSeconds) {
+    auto lengthText = fmt::format("{:.2f}", lengthSeconds);
+    auto dotPos = lengthText.find('.');
+    if (dotPos != std::string::npos) {
+        while (!lengthText.empty() && lengthText.back() == '0') {
+            lengthText.pop_back();
+        }
+        if (!lengthText.empty() && lengthText.back() == '.') {
+            lengthText.pop_back();
+        }
+    }
+    return fmt::format("{}s", lengthText);
+}
+
+struct TagBadgeInfo {
+    const char* title;
+    const char* body;
+};
+
+TagBadgeInfo getTagBadgeInfo(int badgeId) {
+    if (badgeId == TagBadgeLong) {
+        return {
+            "Long Sound",
+            "<cy>Long Sound</c> means the clip duration is longer than <cg>3.0 seconds</c>."
+        };
+    } else if (badgeId == TagBadgeLoud) {
+        return {
+            "Volume Warning",
+            "<cr>Volume Warning</c> means the audio reaches about <cy>0 dBFS peak</c> (near full-scale digital loudness)."
+        };
+    } else if (badgeId == TagBadgeFeatured) {
+        return {
+            "Featured",
+            "<cy>Featured</c> means the audio was recommended by an <cg>admin</c> of <cr>Custom Death Sound</c>."
+        };
+    }
+}
+
+bool SFXCell::init(
+    int index,
+    std::string id,
+    std::string name,
+    std::string url,
+    int downloads,
+    int32_t createdAt,
+    bool isLocal,
+    bool allowPreview,
+    std::vector<std::string> tags,
+    bool showTags,
+    double lengthSeconds,
+    matjson::Value sfxObject
+) {
+    if (!CCLayer::init()) return false;
+
+    m_sfxId = id;
+    m_sfxUrl = url;
+    m_name = name;
+    m_downloadCount = downloads;
+    m_createdAt = createdAt;
+    m_lengthSeconds = lengthSeconds;
+    m_isLocal = isLocal;
+    m_allowPreview = allowPreview;
+    m_showTags = showTags;
+    m_tags = normalizeAndOrderTags(std::move(tags));
+    m_sfxObject = std::move(sfxObject);
+    m_aliveToken = std::make_shared<bool>(true);
+    auto existingPath = dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+    bool alreadyDownloaded = std::filesystem::exists(existingPath);
+    if (alreadyDownloaded) {
+        s_downloadedSfx.insert(m_sfxId);
+    }
+    m_downloadState = (alreadyDownloaded || s_downloadedSfx.contains(m_sfxId))
+        ? DownloadState::Downloaded
+        : DownloadState::NotDownloaded;
+    m_inUse = dsutils::isOnlineSfxPathUsed(existingPath);
+
+    setMouseEnabled(true);
+    setTouchEnabled(true);
+
+    setContentSize({ 340.f, 80.f });
+
+    ccColor3B bgColor = (index % 2 == 0) ? ccc3(75, 75, 75) : ccc3(50, 50, 50);
+    auto layerBG = CCLayerColor::create(ccc4(bgColor.r, bgColor.g, bgColor.b, 255));
+    layerBG->setContentSize(getContentSize());
+    addChild(layerBG);
+
+    auto widget = CCLayer::create();
+    widget->setContentSize({ getContentWidth() * 0.8f, getContentHeight() - 20.f });
+    widget->setPosition({ getContentWidth() * 0.1f, 10.f });
+    addChild(widget);
+
+    m_menu = CCMenu::create();
+    m_menu->setPosition({ 0.f, 0.f });
+    m_menu->setContentSize(widget->getContentSize());
+    widget->addChild(m_menu, 500);
+    
+    auto widgetBG = CCScale9Sprite::create("GJ_square01.png");
+    widgetBG->setContentSize(widget->getContentSize());
+    widgetBG->setAnchorPoint({ 0.f, 0.f });
+    widget->addChild(widgetBG);
+
+    const float previewX = m_menu->getContentWidth() - 30.f;
+    const float previewY = m_menu->getContentHeight() / 2;
+    const float actionButtonGap = 38.f;
+    const float actionSpriteScale = 0.8f;
+    const float infoSpriteScale = 0.6f;
+
+    auto downloadOffSprite = CCSprite::createWithSpriteFrameName("GJ_cancelDownloadBtn_001.png");
+    auto downloadOnSprite = CCSprite::createWithSpriteFrameName("GJ_downloadBtn_001.png");
+    downloadOffSprite->setScale(actionSpriteScale);
+    downloadOnSprite->setScale(actionSpriteScale);
+
+    m_downloadToggle = CCMenuItemExt::createToggler(
+        downloadOffSprite,
+        downloadOnSprite,
+        [this](CCMenuItemToggler* toggler) {
+            this->onDownloadToggle(toggler);
+        }
+    );
+    m_downloadToggle->toggle(false);
+    m_downloadToggle->setPosition({ previewX - actionButtonGap, previewY });
+    m_menu->addChild(m_downloadToggle);
+
+    auto useOffSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongBtn_001.png");
+    auto useOnSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongOnBtn_001.png");
+    useOffSprite->setScale(actionSpriteScale);
+    useOnSprite->setScale(actionSpriteScale);
+
+    m_useToggle = CCMenuItemExt::createToggler(
+        useOffSprite,
+        useOnSprite,
+        [this](CCMenuItemToggler* toggler) {
+            this->onUseToggle(toggler);
+        }
+    );
+    m_useToggle->toggle(false);
+    m_useToggle->setPosition(m_downloadToggle->getPosition());
+    m_menu->addChild(m_useToggle);
+
+    refreshActionButtons();
+
+    std::string displayName = name;
+    auto nameLabel = CCLabelBMFont::create(displayName.c_str(), "bigFont.fnt");
+    nameLabel->setAnchorPoint({ 0.f, 1.f });
+    nameLabel->setPosition({ 10.f, widget->getContentHeight() - 10.f });
+    float nameBaseScale = 0.5f;
+    float actionButtonWidth = m_downloadToggle->getContentWidth() * actionSpriteScale;
+    float maxNameWidth = (previewX - (actionButtonWidth * 2.f + actionButtonGap)) - nameLabel->getPositionX() - 8.f;
+    float targetScale = nameBaseScale;
+    if (maxNameWidth > 0.f && (nameLabel->getContentWidth() * nameBaseScale) > maxNameWidth) {
+        targetScale = maxNameWidth / nameLabel->getContentWidth();
+    }
+    nameLabel->setScale(targetScale);
+    widget->addChild(nameLabel);
+
+    if (!m_isLocal) {
+        auto downloadsSprite = CCSprite::createWithSpriteFrameName("GJ_sDownloadIcon_001.png");
+        downloadsSprite->setPosition({ 20.f, 20.f });
+        widget->addChild(downloadsSprite);
+
+        auto formatDownloads = [](int downloads) -> std::string {
+            char buf[16];
+            if (downloads >= 1000000000)
+            std::snprintf(buf, sizeof(buf), "%.1fB", downloads / 1000000000.0);
+            else if (downloads >= 1000000)
+            std::snprintf(buf, sizeof(buf), "%.1fM", downloads / 1000000.0);
+            else if (downloads >= 1000)
+            std::snprintf(buf, sizeof(buf), "%.1fK", downloads / 1000.0);
+            else
+            std::snprintf(buf, sizeof(buf), "%d", downloads);
+            std::string s(buf);
+            if (s.find('.') != std::string::npos) {
+            s.erase(s.find_last_not_of('0') + 1, std::string::npos);
+            if (s.back() == '.') s.pop_back();
+            }
+            return s;
         };
 
-        std::string normalizeTag(std::string value) {
-            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
-                return static_cast<char>(std::tolower(ch));
-            });
-            return value;
-        }
+        auto downloadsText = CCLabelBMFont::create(formatDownloads(downloads).c_str(), "bigFont.fnt");
+        downloadsText->setAnchorPoint({ 0.f, 0.5f });
+        downloadsText->setScale(0.4f);
+        downloadsText->setPosition({ 30.f, 20.f });
+        widget->addChild(downloadsText);
+    }
 
-        std::vector<std::string> normalizeAndOrderTags(std::vector<std::string> tags) {
-            bool hasLong = false;
-            bool hasLoud = false;
+    if (m_showTags && !m_tags.empty()) {
+        m_tagMenu = CCMenu::create();
+        m_tagMenu->setPosition({ 0.f, 0.f });
+        widget->addChild(m_tagMenu, 510);
 
-            for (auto const& tag : tags) {
-                auto normalized = normalizeTag(static_cast<std::string>(tag));
-                if (normalized == "long") {
-                    hasLong = true;
-                } else if (normalized == "loud") {
-                    hasLoud = true;
-                }
+        float badgeX = m_isLocal ? 20.f : 66.f;
+        constexpr float badgeY = 20.f;
+        constexpr float badgeGap = 6.f;
+        float maxRight = m_useToggle ? (m_useToggle->getPositionX() - 18.f) : 250.f;
+
+        for (auto const& tag : m_tags) {
+            int badgeId = 0;
+            if (tag == "long") {
+                badgeId = TagBadgeLong;
+            } else if (tag == "loud") {
+                badgeId = TagBadgeLoud;
+            } else if (tag == "featured") {
+                badgeId = TagBadgeFeatured;
             }
 
-            std::vector<std::string> ordered;
-            if (hasLong) ordered.push_back("long");
-            if (hasLoud) ordered.push_back("loud");
-            return ordered;
-        }
-
-        std::string formatLengthSeconds(double lengthSeconds) {
-            auto lengthText = fmt::format("{:.2f}", lengthSeconds);
-            auto dotPos = lengthText.find('.');
-            if (dotPos != std::string::npos) {
-                while (!lengthText.empty() && lengthText.back() == '0') {
-                    lengthText.pop_back();
-                }
-                if (!lengthText.empty() && lengthText.back() == '.') {
-                    lengthText.pop_back();
-                }
+            if (badgeId == 0) {
+                continue;
             }
-            return fmt::format("{}s", lengthText);
-        }
 
-        struct TagBadgeInfo {
-            const char* title;
-            const char* body;
-        };
-
-        TagBadgeInfo getTagBadgeInfo(int badgeId) {
+            auto info = getTagBadgeInfo(badgeId);
+            CCSprite* badgeSprite = nullptr;
             if (badgeId == TagBadgeLong) {
-                return {
-                    "Long Sound",
-                    "<cy>Long Sound</c> means the clip duration is longer than <cg>3.0 seconds</c>."
-                };
+                badgeSprite = CCSprite::create("longBadge.png"_spr);
+            } else if (badgeId == TagBadgeLoud) {
+                badgeSprite = CCSprite::create("loudBadge.png"_spr);
+            } else if (badgeId == TagBadgeFeatured) {
+                badgeSprite = CCSprite::create("featuredBadge.png"_spr);
+            }
+            if (!badgeSprite) {
+                continue;
+            }
+            badgeSprite->setScale(0.7f);
+
+            auto badgeBtn = CCMenuItemSpriteExtra::create(
+                badgeSprite,
+                this,
+                menu_selector(SFXCell::onTagBadgePressed)
+            );
+            badgeBtn->setTag(badgeId);
+
+            float badgeWidth = badgeBtn->getContentWidth();
+            float centerX = badgeX + (badgeWidth * 0.5f);
+            if ((centerX + badgeWidth * 0.5f) > maxRight) {
+                break;
             }
 
-            return {
-                "Volume Warning",
-                "<cr>Volume Warning</c> means the audio reaches about <cy>0 dBFS peak</c> (near full-scale digital loudness)."
-            };
+            badgeBtn->setPosition({ centerX, badgeY });
+            m_tagMenu->addChild(badgeBtn);
+            badgeX = centerX + (badgeWidth * 0.5f) + badgeGap;
         }
     }
 
-    bool SFXCell::init(
-        int index,
-        std::string id,
-        std::string name,
-        std::string url,
-        int downloads,
-        int32_t createdAt,
-        bool isLocal,
-        bool allowPreview,
-        std::vector<std::string> tags,
-        bool showTags,
-        double lengthSeconds,
-        matjson::Value sfxObject
-    ) {
-        if (!CCLayer::init()) return false;
+    /*CCSprite* likesSprite;
+    if ((likes - dislikes) >= 0) {
+        likesSprite = CCSprite::createWithSpriteFrameName("GJ_sLikeIcon_001.png");
+    } else {
+        likesSprite = CCSprite::createWithSpriteFrameName("GJ_dislikesIcon_001.png");
+        likesSprite->setScale(0.6f);
+    }
+    likesSprite->setPosition({ 90.f, 20.f });
+    widget->addChild(likesSprite);
 
-        m_sfxId = id;
-        m_sfxUrl = url;
-        m_name = name;
-        m_downloadCount = downloads;
-        m_createdAt = createdAt;
-        m_lengthSeconds = lengthSeconds;
-        m_isLocal = isLocal;
-        m_allowPreview = allowPreview;
-        m_showTags = showTags;
-        m_tags = normalizeAndOrderTags(std::move(tags));
-        m_sfxObject = std::move(sfxObject);
-        m_aliveToken = std::make_shared<bool>(true);
-        auto existingPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-        bool alreadyDownloaded = std::filesystem::exists(existingPath);
-        if (alreadyDownloaded) {
-            s_downloadedSfx.insert(m_sfxId);
-        }
-        m_downloadState = (alreadyDownloaded || s_downloadedSfx.contains(m_sfxId))
-            ? DownloadState::Downloaded
-            : DownloadState::NotDownloaded;
-        m_inUse = utils::isOnlineSfxPathUsed(existingPath);
+    auto likesText = CCLabelBMFont::create(std::to_string(likes - dislikes).c_str(), "bigFont.fnt");
+    likesText->setAnchorPoint({ 0.f, 0.5f });
+    likesText->setScale(0.4f);
+    likesText->setPosition({ 100.f, 20.f });
+    widget->addChild(likesText);*/
 
-        setMouseEnabled(true);
-        setTouchEnabled(true);
+    auto infoIcon = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
+    infoIcon->setScale(infoSpriteScale);
+    auto infoButton = CCMenuItemSpriteExtra::create(
+        infoIcon,
+        this,
+        menu_selector(SFXCell::onInfoPressed)
+    );
+    infoButton->setPosition(m_menu->getContentSize() - 10.f);
 
-        setContentSize({ 340.f, 80.f });
-
-        ccColor3B bgColor = (index % 2 == 0) ? ccc3(75, 75, 75) : ccc3(50, 50, 50);
-        auto layerBG = CCLayerColor::create(ccc4(bgColor.r, bgColor.g, bgColor.b, 255));
-        layerBG->setContentSize(getContentSize());
-        addChild(layerBG);
-
-        auto widget = CCLayer::create();
-        widget->setContentSize({ getContentWidth() * 0.8f, getContentHeight() - 20.f });
-        widget->setPosition({ getContentWidth() * 0.1f, 10.f });
-        addChild(widget);
-
-        m_menu = CCMenu::create();
-        m_menu->setPosition({ 0.f, 0.f });
-        m_menu->setContentSize(widget->getContentSize());
-        widget->addChild(m_menu, 500);
-        
-        auto widgetBG = CCScale9Sprite::create("GJ_square01.png");
-        widgetBG->setContentSize(widget->getContentSize());
-        widgetBG->setAnchorPoint({ 0.f, 0.f });
-        widget->addChild(widgetBG);
-
-        const float previewX = m_menu->getContentWidth() - 30.f;
-        const float previewY = m_menu->getContentHeight() / 2;
-        const float actionButtonGap = 38.f;
-        const float actionSpriteScale = 0.8f;
-        const float infoSpriteScale = 0.6f;
-
-        auto downloadOffSprite = CCSprite::createWithSpriteFrameName("GJ_cancelDownloadBtn_001.png");
-        auto downloadOnSprite = CCSprite::createWithSpriteFrameName("GJ_downloadBtn_001.png");
-        downloadOffSprite->setScale(actionSpriteScale);
-        downloadOnSprite->setScale(actionSpriteScale);
-
-        m_downloadToggle = CCMenuItemExt::createToggler(
-            downloadOffSprite,
-            downloadOnSprite,
-            [this](CCMenuItemToggler* toggler) {
-                this->onDownloadToggle(toggler);
-            }
+    if (Mod::get()->getSavedValue<bool>("is-admin", false)) {
+        auto editSprite = CircleButtonSprite::create(
+            CCSprite::create("edit.png"_spr),
+            CircleBaseColor::Green,
+            CircleBaseSize::Small
         );
-        m_downloadToggle->toggle(false);
-        m_downloadToggle->setPosition({ previewX - actionButtonGap, previewY });
-        m_menu->addChild(m_downloadToggle);
-
-        auto useOffSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongBtn_001.png");
-        auto useOnSprite = CCSprite::createWithSpriteFrameName("GJ_selectSongOnBtn_001.png");
-        useOffSprite->setScale(actionSpriteScale);
-        useOnSprite->setScale(actionSpriteScale);
-
-        m_useToggle = CCMenuItemExt::createToggler(
-            useOffSprite,
-            useOnSprite,
-            [this](CCMenuItemToggler* toggler) {
-                this->onUseToggle(toggler);
-            }
-        );
-        m_useToggle->toggle(false);
-        m_useToggle->setPosition(m_downloadToggle->getPosition());
-        m_menu->addChild(m_useToggle);
-
-        refreshActionButtons();
-
-        std::string displayName = name;
-        auto nameLabel = CCLabelBMFont::create(displayName.c_str(), "bigFont.fnt");
-        nameLabel->setAnchorPoint({ 0.f, 1.f });
-        nameLabel->setPosition({ 10.f, widget->getContentHeight() - 10.f });
-        float nameBaseScale = 0.5f;
-        float actionButtonWidth = m_downloadToggle->getContentWidth() * actionSpriteScale;
-        float maxNameWidth = (previewX - (actionButtonWidth * 2.f + actionButtonGap)) - nameLabel->getPositionX() - 8.f;
-        float targetScale = nameBaseScale;
-        if (maxNameWidth > 0.f && (nameLabel->getContentWidth() * nameBaseScale) > maxNameWidth) {
-            targetScale = maxNameWidth / nameLabel->getContentWidth();
-        }
-        nameLabel->setScale(targetScale);
-        widget->addChild(nameLabel);
-
-        if (!m_isLocal) {
-            auto downloadsSprite = CCSprite::createWithSpriteFrameName("GJ_sDownloadIcon_001.png");
-            downloadsSprite->setPosition({ 20.f, 20.f });
-            widget->addChild(downloadsSprite);
-
-            auto formatDownloads = [](int downloads) -> std::string {
-                char buf[16];
-                if (downloads >= 1000000000)
-                std::snprintf(buf, sizeof(buf), "%.1fB", downloads / 1000000000.0);
-                else if (downloads >= 1000000)
-                std::snprintf(buf, sizeof(buf), "%.1fM", downloads / 1000000.0);
-                else if (downloads >= 1000)
-                std::snprintf(buf, sizeof(buf), "%.1fK", downloads / 1000.0);
-                else
-                std::snprintf(buf, sizeof(buf), "%d", downloads);
-                std::string s(buf);
-                if (s.find('.') != std::string::npos) {
-                s.erase(s.find_last_not_of('0') + 1, std::string::npos);
-                if (s.back() == '.') s.pop_back();
-                }
-                return s;
-            };
-
-            auto downloadsText = CCLabelBMFont::create(formatDownloads(downloads).c_str(), "bigFont.fnt");
-            downloadsText->setAnchorPoint({ 0.f, 0.5f });
-            downloadsText->setScale(0.4f);
-            downloadsText->setPosition({ 30.f, 20.f });
-            widget->addChild(downloadsText);
-        }
-
-        if (m_showTags && !m_tags.empty()) {
-            m_tagMenu = CCMenu::create();
-            m_tagMenu->setPosition({ 0.f, 0.f });
-            widget->addChild(m_tagMenu, 510);
-
-            float badgeX = m_isLocal ? 20.f : 66.f;
-            constexpr float badgeY = 20.f;
-            constexpr float badgeGap = 6.f;
-            float maxRight = m_useToggle ? (m_useToggle->getPositionX() - 18.f) : 250.f;
-
-            for (auto const& tag : m_tags) {
-                int badgeId = 0;
-                if (tag == "long") {
-                    badgeId = TagBadgeLong;
-                } else if (tag == "loud") {
-                    badgeId = TagBadgeLoud;
-                }
-
-                if (badgeId == 0) {
-                    continue;
-                }
-
-                auto info = getTagBadgeInfo(badgeId);
-                CCSprite* badgeSprite = nullptr;
-                if (badgeId == TagBadgeLong) {
-                    badgeSprite = CCSprite::create("longBadge.png"_spr);
-                } else if (badgeId == TagBadgeLoud) {
-                    badgeSprite = CCSprite::create("loudBadge.png"_spr);
-                }
-                if (!badgeSprite) {
-                    continue;
-                }
-                badgeSprite->setScale(0.7f);
-
-                auto badgeBtn = CCMenuItemSpriteExtra::create(
-                    badgeSprite,
-                    this,
-                    menu_selector(SFXCell::onTagBadgePressed)
-                );
-                badgeBtn->setTag(badgeId);
-
-                float badgeWidth = badgeBtn->getContentWidth();
-                float centerX = badgeX + (badgeWidth * 0.5f);
-                if ((centerX + badgeWidth * 0.5f) > maxRight) {
-                    break;
-                }
-
-                badgeBtn->setPosition({ centerX, badgeY });
-                m_tagMenu->addChild(badgeBtn);
-                badgeX = centerX + (badgeWidth * 0.5f) + badgeGap;
-            }
-        }
-
-        /*CCSprite* likesSprite;
-        if ((likes - dislikes) >= 0) {
-            likesSprite = CCSprite::createWithSpriteFrameName("GJ_sLikeIcon_001.png");
-        } else {
-            likesSprite = CCSprite::createWithSpriteFrameName("GJ_dislikesIcon_001.png");
-            likesSprite->setScale(0.6f);
-        }
-        likesSprite->setPosition({ 90.f, 20.f });
-        widget->addChild(likesSprite);
-
-        auto likesText = CCLabelBMFont::create(std::to_string(likes - dislikes).c_str(), "bigFont.fnt");
-        likesText->setAnchorPoint({ 0.f, 0.5f });
-        likesText->setScale(0.4f);
-        likesText->setPosition({ 100.f, 20.f });
-        widget->addChild(likesText);*/
-
-        auto infoIcon = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");
-        infoIcon->setScale(infoSpriteScale);
-        auto infoButton = CCMenuItemSpriteExtra::create(
-            infoIcon,
+        editSprite->setScale(0.7f);
+        auto editButton = CCMenuItemSpriteExtra::create(
+            editSprite,
             this,
-            menu_selector(SFXCell::onInfoPressed)
+            menu_selector(SFXCell::onEditPressed)
         );
-        infoButton->setPosition(m_menu->getContentSize() - 10.f);
-        m_menu->addChild(infoButton);
+        auto infoPos = infoButton->getPosition();
+        editButton->setPosition({ infoPos.x - 38.f, infoPos.y });
+        m_menu->addChild(editButton);
+    }
+    m_menu->addChild(infoButton);
 
-        if (m_allowPreview) {
-            this->schedule(schedule_selector(SFXCell::checkPreviewFinished), 0.1f);
-        }
-
-        return true;
+    if (m_allowPreview) {
+        this->schedule(schedule_selector(SFXCell::checkPreviewFinished), 0.1f);
     }
 
-    SFXCell* SFXCell::create(
-        int index,
-        std::string id,
-        std::string name,
-        std::string url,
-        int downloads,
-        int32_t createdAt,
-        bool isLocal,
-        bool allowPreview,
-        std::vector<std::string> tags,
-        bool showTags,
-        double lengthSeconds,
-        matjson::Value sfxObject
-    ) {
-        auto ret = new SFXCell();
-        if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview, std::move(tags), showTags, lengthSeconds, std::move(sfxObject))) {
-            ret->autorelease();
-            return ret;
-        }
-        CC_SAFE_DELETE(ret);
-        return nullptr;
+    return true;
+}
+
+SFXCell* SFXCell::create(
+    int index,
+    std::string id,
+    std::string name,
+    std::string url,
+    int downloads,
+    int32_t createdAt,
+    bool isLocal,
+    bool allowPreview,
+    std::vector<std::string> tags,
+    bool showTags,
+    double lengthSeconds,
+    matjson::Value sfxObject
+) {
+    auto ret = new SFXCell();
+    if (ret && ret->init(index, id, name, url, downloads, createdAt, isLocal, allowPreview, std::move(tags), showTags, lengthSeconds, std::move(sfxObject))) {
+        ret->autorelease();
+        return ret;
     }
+    CC_SAFE_DELETE(ret);
+    return nullptr;
+}
 
-    void SFXCell::onExit() {
-        this->unschedule(schedule_selector(SFXCell::checkPreviewFinished));
-        stopPreview();
-        if (m_aliveToken) {
-            *m_aliveToken = false;
-        }
-        CCLayer::onExit();
+void SFXCell::onEditPressed(CCObject* sender) {
+    EditSFXPopup::create(this)->show();
+}
+
+void SFXCell::onExit() {
+    this->unschedule(schedule_selector(SFXCell::checkPreviewFinished));
+    stopPreview();
+    if (m_aliveToken) {
+        *m_aliveToken = false;
     }
+    CCLayer::onExit();
+}
 
-    void SFXCell::validateDownloadState() {
-        auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-        bool fileExists = std::filesystem::exists(downloadPath);
+void SFXCell::validateDownloadState() {
+    auto downloadPath = dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+    bool fileExists = std::filesystem::exists(downloadPath);
 
-        if (!fileExists && m_downloadState == DownloadState::Downloaded) {
-            m_downloadState = DownloadState::NotDownloaded;
-            m_inUse = false;
-            utils::setOnlineSfxPathUsed(downloadPath, false);
-            refreshActionButtons();
-        }
-    }
-
-    void SFXCell::startDownload() {
-        m_downloadTask.cancel();
-        m_downloadState = DownloadState::Downloading;
-
-        auto outPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-        auto url = utils::makeSfxDownloadUrl(m_sfxUrl);
-        auto absPath = std::filesystem::absolute(outPath);
-
-        if (url.empty()) {
-            log::error("Cannot download SFX {}: empty URL", m_sfxId);
-            m_downloadState = DownloadState::NotDownloaded;
-            refreshActionButtons();
-            return;
-        }
-
-            log::info("[SFX Download] Starting '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
-
-        std::error_code ec;
-        std::filesystem::create_directories(outPath.parent_path(), ec);
-        if (ec) {
-            log::error("Failed creating SFX download directory: {}", ec.message());
-            m_downloadState = DownloadState::NotDownloaded;
-            refreshActionButtons();
-            return;
-        }
-
-        web::WebRequest req;
-        req.timeout(std::chrono::seconds(60));
-
-        m_downloadTask.spawn(
-            req.get(url),
-            [this, outPath](web::WebResponse value) {
-                auto absPath = std::filesystem::absolute(outPath);
-                if (!value.ok()) {
-                        log::error("[SFX Download] Failed '{}' ({}) HTTP {} -> {}:1", m_name, m_sfxId, value.code(), geode::utils::string::pathToString(absPath));
-                    m_downloadState = DownloadState::NotDownloaded;
-                    refreshActionButtons();
-                    return;
-                }
-
-                auto writeResult = value.into(outPath);
-                if (!writeResult.isOk()) {
-                        log::error("[SFX Download] Failed saving '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
-                    m_downloadState = DownloadState::NotDownloaded;
-                    refreshActionButtons();
-                    return;
-                }
-
-                    log::info("[SFX Download] Completed '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
-
-                finishDownload();
-            }
-        );
-    }
-
-    void SFXCell::cancelDownload() {
-        m_downloadTask.cancel();
-
-        auto absPath = std::filesystem::absolute(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl));
-            log::info("[SFX Download] Canceled '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
-
-        stopPreview();
-
+    if (!fileExists && m_downloadState == DownloadState::Downloaded) {
         m_downloadState = DownloadState::NotDownloaded;
         m_inUse = false;
-        utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), false);
-        s_downloadedSfx.erase(m_sfxId);
-    }
-
-    void SFXCell::finishDownload() {
-        auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-        std::vector<std::string> metadataTags;
-        metadataTags.reserve(m_tags.size());
-        for (auto const& tag : m_tags) {
-            metadataTags.push_back(static_cast<std::string>(tag));
-        }
-        matjson::Value metadataObject = m_sfxObject.isObject() ? m_sfxObject : matjson::Value::object();
-        metadataObject["id"] = m_sfxId;
-        metadataObject["name"] = m_name;
-        metadataObject["url"] = m_sfxUrl;
-        metadataObject["downloads"] = m_downloadCount;
-        metadataObject["createdAt"] = m_createdAt;
-        if (m_lengthSeconds >= 0.0) {
-            metadataObject["lengthSeconds"] = m_lengthSeconds;
-        }
-        if (!metadataObject.contains("tags") || !metadataObject["tags"].isArray()) {
-            metadataObject["tags"] = matjson::Value::array();
-            for (auto const& tag : m_tags) {
-                metadataObject["tags"].push(tag);
-            }
-        }
-        utils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name, metadataTags, metadataObject);
-        m_downloadState = DownloadState::Downloaded;
-        m_inUse = false;
-        s_downloadedSfx.insert(m_sfxId);
-        utils::setOnlineSfxPathUsed(downloadPath, false);
-        deathsounds::DSRequest::get()->incrementSFXDownload(m_sfxId);
-        auto absPath = std::filesystem::absolute(downloadPath);
-            log::info("[SFX Download] Ready for use '{}' ({}) at {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
+        dsutils::setOnlineSfxPathUsed(downloadPath, false);
         refreshActionButtons();
     }
+}
 
-    void SFXCell::onDownloadToggle(CCObject* sender) {
-        if (m_downloadState == DownloadState::Downloaded) {
-            return;
-        }
+void SFXCell::startDownload() {
+    m_downloadTask.cancel();
+    m_downloadState = DownloadState::Downloading;
 
-        auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
+    auto outPath = dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+    auto url = dsutils::makeSfxDownloadUrl(m_sfxUrl);
+    auto absPath = std::filesystem::absolute(outPath);
 
-        bool wantsDownloading = toggler
-            ? !toggler->isOn()
-            : (m_downloadState == DownloadState::NotDownloaded);
-
-        if (wantsDownloading && m_downloadState == DownloadState::NotDownloaded) {
-            startDownload();
-            return;
-        }
-
-        if (!wantsDownloading && m_downloadState == DownloadState::Downloading) {
-            cancelDownload();
-        }
+    if (url.empty()) {
+        log::error("Cannot download SFX {}: empty URL", m_sfxId);
+        m_downloadState = DownloadState::NotDownloaded;
+        refreshActionButtons();
+        return;
     }
 
-    void SFXCell::onUseToggle(CCObject* sender) {
-        if (m_downloadState != DownloadState::Downloaded) {
-            return;
-        }
+        log::info("Starting '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
 
-        auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
-        m_inUse = toggler ? toggler->isOn() : !m_inUse;
-        utils::setOnlineSfxPathUsed(utils::getSfxDownloadPath(m_sfxId, m_sfxUrl), m_inUse);
-
-        auto selectedPaths = utils::getUsedOnlineSfxPaths();
-        log::info("[SFX Use] {} '{}' ({}) for explode_11.ogg random pool ({} selected)",
-            m_inUse ? "Enabled" : "Disabled",
-            m_name,
-            m_sfxId,
-            selectedPaths.size());
+    std::error_code ec;
+    std::filesystem::create_directories(outPath.parent_path(), ec);
+    if (ec) {
+        log::error("Failed creating SFX download directory: {}", ec.message());
+        m_downloadState = DownloadState::NotDownloaded;
+        refreshActionButtons();
+        return;
     }
 
-    void SFXCell::onInfoPressed(CCObject*) {
-        auto uploadedText = m_isLocal ? std::string("Unknown") : deathsounds::utils::formatDate(m_createdAt);
-        auto downloadsText = m_isLocal ? std::string("Unknown") : fmt::to_string(m_downloadCount);
-        auto soundLengthLine = m_lengthSeconds >= 0.0
-            ? fmt::format("\n<cl>Sound Length:</c> {}", formatLengthSeconds(m_lengthSeconds))
-            : std::string();
-        createQuickPopup(
-            m_name.c_str(),
-            fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}{}",
-                m_name, uploadedText, downloadsText, soundLengthLine),
-            "OK", "Delete",
-            [this](FLAlertLayer*, bool btn2) {
-                if (!btn2) {
-                    return;
-                }
+    web::WebRequest req;
+    req.timeout(std::chrono::seconds(60));
 
-                auto downloadPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-                m_downloadTask.cancel();
-                std::error_code ec;
-                std::filesystem::remove(downloadPath, ec);
-                std::filesystem::remove(utils::getSfxPlayablePath(m_sfxId, m_sfxUrl), ec);
-                utils::removeDownloadedSfxMetadata(downloadPath);
-
-                stopPreview();
-
+    m_downloadTask.spawn(
+        req.get(url),
+        [this, outPath](web::WebResponse value) {
+            auto absPath = std::filesystem::absolute(outPath);
+            if (!value.ok()) {
+                    log::error("Failed '{}' ({}) HTTP {} -> {}:1", m_name, m_sfxId, value.code(), geode::utils::string::pathToString(absPath));
                 m_downloadState = DownloadState::NotDownloaded;
-                m_inUse = false;
-                utils::setOnlineSfxPathUsed(downloadPath, false);
-                s_downloadedSfx.erase(m_sfxId);
                 refreshActionButtons();
+                return;
             }
-        );
-    }
 
-    void SFXCell::onTagBadgePressed(CCObject* sender) {
-        auto item = typeinfo_cast<CCNode*>(sender);
-        if (!item) {
-            return;
-        }
-
-        auto info = getTagBadgeInfo(item->getTag());
-        FLAlertLayer::create(info.title, info.body, "OK")->show();
-    }
-
-    void SFXCell::refreshActionButtons() {
-        if (!m_downloadToggle || !m_useToggle || !m_menu) {
-            return;
-        }
-
-        const float previewX = m_menu->getContentWidth() - 30.f;
-        const float previewY = m_menu->getContentHeight() / 2;
-        const float actionButtonGap = 38.f;
-
-        bool isDownloaded = (m_downloadState == DownloadState::Downloaded);
-        bool isDownloading = (m_downloadState == DownloadState::Downloading);
-
-        m_downloadToggle->setVisible(!isDownloaded);
-        m_downloadToggle->toggle(isDownloading);
-        
-        m_downloadToggle->setPosition({ previewX, previewY });
-
-        m_useToggle->setVisible(isDownloaded);
-        m_useToggle->toggle(!m_inUse);
-        const bool reservePreviewSlot = isDownloaded && m_allowPreview;
-        m_useToggle->setPosition({ reservePreviewSlot ? previewX - actionButtonGap : previewX, previewY });
-
-        if (isDownloaded && m_allowPreview) {
-            ensurePreviewButton();
-            if (m_previewToggle) m_previewToggle->setPosition({ previewX, previewY });
-        } else {
-            removePreviewButton();
-        }
-    }
-
-    void SFXCell::ensurePreviewButton() {
-        if (!m_menu || m_previewToggle) {
-            return;
-        }
-
-        m_previewToggle = CCMenuItemExt::createToggler(
-            [] {
-                auto spr = CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png");
-                spr->setScale(0.8f);
-                return spr;
-            }(),
-            [] {
-                auto spr = CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png");
-                spr->setScale(0.8f);
-                return spr;
-            }(),
-            [this](CCMenuItemToggler* toggler) {
-                if (this->m_previewState.playing) {
-                    this->stopPreview();
-                    return;
-                }
-
-                if (!this->startPreview()) {
-                    toggler->toggle(true);
-                }
+            auto writeResult = value.into(outPath);
+            if (!writeResult.isOk()) {
+                    log::error("Failed saving '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
+                m_downloadState = DownloadState::NotDownloaded;
+                refreshActionButtons();
+                return;
             }
-        );
 
-        m_previewToggle->setPosition({ m_menu->getContentWidth() - 30.f, m_menu->getContentHeight() / 2 });
-        m_menu->addChild(m_previewToggle);
-        m_previewToggle->toggle(true);
+                log::info("Completed '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
+
+            finishDownload();
+        }
+    );
+}
+
+void SFXCell::cancelDownload() {
+    m_downloadTask.cancel();
+
+    auto absPath = std::filesystem::absolute(dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl));
+        log::info("Canceled '{}' ({}) -> {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
+
+    stopPreview();
+
+    m_downloadState = DownloadState::NotDownloaded;
+    m_inUse = false;
+    dsutils::setOnlineSfxPathUsed(dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl), false);
+    s_downloadedSfx.erase(m_sfxId);
+}
+
+void SFXCell::finishDownload() {
+    auto downloadPath = dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+    std::vector<std::string> metadataTags;
+    metadataTags.reserve(m_tags.size());
+    for (auto const& tag : m_tags) {
+        metadataTags.push_back(static_cast<std::string>(tag));
+    }
+    matjson::Value metadataObject = m_sfxObject.isObject() ? m_sfxObject : matjson::Value::object();
+    metadataObject["id"] = m_sfxId;
+    metadataObject["name"] = m_name;
+    metadataObject["url"] = m_sfxUrl;
+    metadataObject["downloads"] = m_downloadCount;
+    metadataObject["createdAt"] = m_createdAt;
+    if (m_lengthSeconds >= 0.0) {
+        metadataObject["lengthSeconds"] = m_lengthSeconds;
+    }
+    if (!metadataObject.contains("tags") || !metadataObject["tags"].isArray()) {
+        metadataObject["tags"] = matjson::Value::array();
+        for (auto const& tag : m_tags) {
+            metadataObject["tags"].push(tag);
+        }
+    }
+    dsutils::saveDownloadedSfxMetadata(downloadPath, m_sfxId, m_name, metadataTags, metadataObject);
+    m_downloadState = DownloadState::Downloaded;
+    m_inUse = false;
+    s_downloadedSfx.insert(m_sfxId);
+    dsutils::setOnlineSfxPathUsed(downloadPath, false);
+    DSRequest::get()->incrementSFXDownload(m_sfxId);
+    auto absPath = std::filesystem::absolute(downloadPath);
+        log::info("Ready for use '{}' ({}) at {}:1", m_name, m_sfxId, geode::utils::string::pathToString(absPath));
+    refreshActionButtons();
+}
+
+void SFXCell::onDownloadToggle(CCObject* sender) {
+    if (m_downloadState == DownloadState::Downloaded) {
+        return;
     }
 
-    void SFXCell::checkPreviewFinished(float) {
-        if (!m_previewState.playing || !m_previewState.channel) {
-            return;
-        }
+    auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
 
-        bool isPlaying = false;
-        FMOD_RESULT result = m_previewState.channel->isPlaying(&isPlaying);
-        if (result != FMOD_OK || !isPlaying) {
+    bool wantsDownloading = toggler
+        ? !toggler->isOn()
+        : (m_downloadState == DownloadState::NotDownloaded);
+
+    if (wantsDownloading && m_downloadState == DownloadState::NotDownloaded) {
+        startDownload();
+        return;
+    }
+
+    if (!wantsDownloading && m_downloadState == DownloadState::Downloading) {
+        cancelDownload();
+    }
+}
+
+void SFXCell::onUseToggle(CCObject* sender) {
+    if (m_downloadState != DownloadState::Downloaded) {
+        return;
+    }
+
+    auto toggler = typeinfo_cast<CCMenuItemToggler*>(sender);
+    m_inUse = toggler ? toggler->isOn() : !m_inUse;
+    dsutils::setOnlineSfxPathUsed(dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl), m_inUse);
+
+    auto selectedPaths = dsutils::getUsedOnlineSfxPaths();
+    log::info("{} '{}' ({}) for explode_11.ogg random pool ({} selected)",
+        m_inUse ? "Enabled" : "Disabled",
+        m_name,
+        m_sfxId,
+        selectedPaths.size());
+}
+
+void SFXCell::onInfoPressed(CCObject*) {
+    auto uploadedText = m_isLocal ? std::string("Unknown") : dsutils::formatDate(m_createdAt);
+    auto downloadsText = m_isLocal ? std::string("Unknown") : fmt::to_string(m_downloadCount);
+    auto soundLengthLine = m_lengthSeconds >= 0.0
+        ? fmt::format("\n<cl>Sound Length:</c> {}", formatLengthSeconds(m_lengthSeconds))
+        : std::string();
+    createQuickPopup(
+        m_name.c_str(),
+        fmt::format("<cb>Name (full):</c> {}\n<cy>Uploaded:</c> {}\n<cg>Downloads:</c> {}{}",
+            m_name, uploadedText, downloadsText, soundLengthLine),
+        "OK", "Delete",
+        [this](FLAlertLayer*, bool btn2) {
+            if (!btn2) {
+                return;
+            }
+
+            auto downloadPath = dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+            m_downloadTask.cancel();
+            std::error_code ec;
+            std::filesystem::remove(downloadPath, ec);
+            std::filesystem::remove(dsutils::getSfxPlayablePath(m_sfxId, m_sfxUrl), ec);
+            dsutils::removeDownloadedSfxMetadata(downloadPath);
+
             stopPreview();
-            if (m_previewToggle) {
-                m_previewToggle->toggle(true);
+
+            m_downloadState = DownloadState::NotDownloaded;
+            m_inUse = false;
+            dsutils::setOnlineSfxPathUsed(downloadPath, false);
+            s_downloadedSfx.erase(m_sfxId);
+            refreshActionButtons();
+        }
+    );
+}
+
+void SFXCell::onTagBadgePressed(CCObject* sender) {
+    auto item = typeinfo_cast<CCNode*>(sender);
+    if (!item) {
+        return;
+    }
+
+    auto info = getTagBadgeInfo(item->getTag());
+    FLAlertLayer::create(info.title, info.body, "OK")->show();
+}
+
+void SFXCell::refreshActionButtons() {
+    if (!m_downloadToggle || !m_useToggle || !m_menu) {
+        return;
+    }
+
+    const float previewX = m_menu->getContentWidth() - 30.f;
+    const float previewY = m_menu->getContentHeight() / 2;
+    const float actionButtonGap = 38.f;
+
+    bool isDownloaded = (m_downloadState == DownloadState::Downloaded);
+    bool isDownloading = (m_downloadState == DownloadState::Downloading);
+
+    m_downloadToggle->setVisible(!isDownloaded);
+    m_downloadToggle->toggle(isDownloading);
+    
+    m_downloadToggle->setPosition({ previewX, previewY });
+
+    m_useToggle->setVisible(isDownloaded);
+    m_useToggle->toggle(!m_inUse);
+    const bool reservePreviewSlot = isDownloaded && m_allowPreview;
+    m_useToggle->setPosition({ reservePreviewSlot ? previewX - actionButtonGap : previewX, previewY });
+
+    if (isDownloaded && m_allowPreview) {
+        ensurePreviewButton();
+        if (m_previewToggle) m_previewToggle->setPosition({ previewX, previewY });
+    } else {
+        removePreviewButton();
+    }
+}
+
+void SFXCell::ensurePreviewButton() {
+    if (!m_menu || m_previewToggle) {
+        return;
+    }
+
+    m_previewToggle = CCMenuItemExt::createToggler(
+        [] {
+            auto spr = CCSprite::createWithSpriteFrameName("GJ_playMusicBtn_001.png");
+            spr->setScale(0.8f);
+            return spr;
+        }(),
+        [] {
+            auto spr = CCSprite::createWithSpriteFrameName("GJ_stopMusicBtn_001.png");
+            spr->setScale(0.8f);
+            return spr;
+        }(),
+        [this](CCMenuItemToggler* toggler) {
+            if (this->m_previewState.playing) {
+                this->stopPreview();
+                return;
+            }
+
+            if (!this->startPreview()) {
+                toggler->toggle(true);
             }
         }
+    );
+
+    m_previewToggle->setPosition({ m_menu->getContentWidth() - 30.f, m_menu->getContentHeight() / 2 });
+    m_menu->addChild(m_previewToggle);
+    m_previewToggle->toggle(true);
+}
+
+void SFXCell::checkPreviewFinished(float) {
+    if (!m_previewState.playing || !m_previewState.channel) {
+        return;
     }
 
-    void SFXCell::removePreviewButton() {
-        if (!m_previewToggle) {
-            return;
-        }
-
+    bool isPlaying = false;
+    FMOD_RESULT result = m_previewState.channel->isPlaying(&isPlaying);
+    if (result != FMOD_OK || !isPlaying) {
         stopPreview();
+        if (m_previewToggle) {
+            m_previewToggle->toggle(true);
+        }
+    }
+}
 
-        m_previewToggle->removeFromParent();
-        m_previewToggle = nullptr;
+void SFXCell::removePreviewButton() {
+    if (!m_previewToggle) {
+        return;
     }
 
-    bool SFXCell::startPreview() {
-        auto originalPath = utils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
-        return utils::startPreviewPlayback(m_previewState, originalPath, m_name, m_sfxId);
-    }
+    stopPreview();
 
-    void SFXCell::stopPreview() {
-        utils::stopPreviewPlayback(m_previewState);
-    }
+    m_previewToggle->removeFromParent();
+    m_previewToggle = nullptr;
+}
+
+bool SFXCell::startPreview() {
+    auto originalPath = dsutils::getSfxDownloadPath(m_sfxId, m_sfxUrl);
+    return dsutils::startPreviewPlayback(m_previewState, originalPath, m_name, m_sfxId);
+}
+
+void SFXCell::stopPreview() {
+    dsutils::stopPreviewPlayback(m_previewState);
 }

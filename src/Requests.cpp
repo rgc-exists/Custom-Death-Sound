@@ -1,7 +1,5 @@
 #include "Requests.hpp"
 
-using namespace deathsounds;
-
 DSRequest* DSRequest::get()  {
     static DSRequest instance;
     return &instance;
