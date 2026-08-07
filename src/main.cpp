@@ -7,9 +7,6 @@
 // #include <Geode/modify/PlayLayer.hpp>
 #include "Utils.hpp"
 
-#include <Geode/modify/GJGameLevel.hpp> // For temporary inside joke (approved by index staff, only affects one person in the dev's friend group)
-#include <Geode/utils/web.hpp> // Also for inside joke
-
 using namespace geode::prelude;
 
 FMOD::Channel* playingChannel = nullptr;
@@ -418,40 +415,6 @@ class $modify(FMODAudioEngine) {
 		}
 
 		return FMODAudioEngine::playEffect(path, speed, p2, volume);
-	}
-};
-
-// This class is for a temporary inside joke (approved by index staff, only affects one person in the dev's friend group) and will be removed soon.
-class $modify(GJGameLevel) {
-
-	struct Fields {
-		TaskHolder<web::WebResponse> m_insideJokeListener;
-	};
-
-	gd::string getAudioFileName() {
-
-		// int accountID = 19343137; // My account ID (for testing purposes)
-		int accountID = 13744173; // One of my (the mod developer) friends; who the harmless inside joke is for
-
-		if (GJAccountManager::sharedState()->m_accountID == accountID) {
-			web::WebRequest req = web::WebRequest();
-			auto timeout = req.timeout(std::chrono::seconds(2));
-			std::string url = "https://randominsidejoke-default-rtdb.firebaseio.com/active.json";
-			auto resp = req.getSync(url);
-			log::debug("response recieved");
-			if (resp.ok()) {
-				log::debug("response ok");
-				log::debug("response: {}", resp.string().unwrap());
-				if (resp.string().unwrap().c_str()[0] == '1') {
-					return geode::utils::string::pathToString("790340.ogg"_spr);
-				}
-			}
-			else {
-				log::debug("error: {}", resp.errorMessage());
-			}
-		}
-
-		return GJGameLevel::getAudioFileName();
 	}
 };
 
