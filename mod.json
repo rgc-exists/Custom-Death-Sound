@@ -8,7 +8,7 @@
 	},
 	"id": "rgc_exists.death_sfx_changer",
 	"name": "Custom Death Sound",
-	"version": "v2.0.0-beta.9",
+	"version": "v2.0.0-beta.8",
 	"developers": [ "OmgRod", "RGC Exists" ],
 	"description": "A mod for changing death sounds with extra randomization features.",
 	"tags": [ "offline", "online", "customization", "content", "gameplay" ],

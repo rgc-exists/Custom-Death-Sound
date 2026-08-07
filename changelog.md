@@ -1,11 +1,5 @@
 # Changelog
 
-## v2.0.0-beta.9
-- Removed the temporary inside joke that only affected one of my close friends, which was added with permission from the index staff.
-
-## v2.0.0-beta.8
-- With permission from index staff, secretly added a harmless inside joke that only affected one of my close friends.
-
 ## v2.0.0-beta.7
 
 - Fixed bug where sound packs wouldn't download
